@@ -320,9 +320,32 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        const sourceKeys = new Set(adminConfig.SourceConfig.map((s) => s.key));
+        const normalizedEnabledApis = Array.isArray(enabledApis)
+          ? Array.from(new Set(enabledApis)).filter((apiKey) => sourceKeys.has(apiKey))
+          : [];
+        const groupUpperBound = new Set<string>();
+        const hasGroupUpperBound = targetEntry.tags && targetEntry.tags.length > 0;
+        if (hasGroupUpperBound) {
+          targetEntry.tags.forEach((tagName: string) => {
+            const tagConfig = adminConfig.UserConfig.Tags?.find((t) => t.name === tagName);
+            tagConfig?.enabledApis?.forEach((apiKey) => groupUpperBound.add(apiKey));
+          });
+        }
+
+        if (hasGroupUpperBound) {
+          const disallowedApis = normalizedEnabledApis.filter((apiKey) => !groupUpperBound.has(apiKey));
+          if (disallowedApis.length > 0) {
+            return NextResponse.json(
+              { error: '采集源权限不能超出用户组允许的采集源范围' },
+              { status: 400 }
+            );
+          }
+        }
+
         // 更新用户的采集源权限
-        if (enabledApis && enabledApis.length > 0) {
-          targetEntry.enabledApis = enabledApis;
+        if (normalizedEnabledApis.length > 0) {
+          targetEntry.enabledApis = normalizedEnabledApis;
         } else {
           // 如果为空数组或未提供，则删除该字段，表示无限制
           delete targetEntry.enabledApis;

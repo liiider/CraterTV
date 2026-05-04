@@ -265,7 +265,6 @@ interface SiteConfig {
   DoubanProxy: string;
   DoubanImageProxyType: string;
   DoubanImageProxy: string;
-  DisableYellowFilter: boolean;
   FluidSearch: boolean;
   EnableWebLive: boolean;
 }
@@ -412,6 +411,41 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
   // 获取用户组列表
   const userGroups = config?.UserConfig?.Tags || [];
+
+  const getGroupAllowedApiKeys = useCallback((tags?: string[]) => {
+    if (!tags || tags.length === 0) return null;
+
+    const allowedApiKeys = new Set<string>();
+    tags.forEach((tagName) => {
+      const group = userGroups.find((item) => item.name === tagName);
+      group?.enabledApis?.forEach((apiKey) => allowedApiKeys.add(apiKey));
+    });
+    return allowedApiKeys;
+  }, [userGroups]);
+
+  const getSelectableSourcesForUser = useCallback((user?: { tags?: string[] } | null) => {
+    const sources = config?.SourceConfig || [];
+    const groupAllowedApiKeys = getGroupAllowedApiKeys(user?.tags);
+
+    if (!groupAllowedApiKeys) {
+      return sources;
+    }
+
+    return sources.filter((source) => groupAllowedApiKeys.has(source.key));
+  }, [config?.SourceConfig, getGroupAllowedApiKeys]);
+
+  const getEffectiveUserApiCount = useCallback((user: { enabledApis?: string[]; tags?: string[] }) => {
+    if (!user.enabledApis || user.enabledApis.length === 0) {
+      return null;
+    }
+
+    const groupAllowedApiKeys = getGroupAllowedApiKeys(user.tags);
+    if (!groupAllowedApiKeys) {
+      return user.enabledApis.length;
+    }
+
+    return user.enabledApis.filter((apiKey) => groupAllowedApiKeys.has(apiKey)).length;
+  }, [getGroupAllowedApiKeys]);
 
   // 处理用户组相关操作
   const handleUserGroupAction = async (
@@ -577,9 +611,15 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
     username: string;
     role: 'user' | 'admin' | 'owner';
     enabledApis?: string[];
+    tags?: string[];
   }) => {
+    const groupAllowedApiKeys = getGroupAllowedApiKeys(user.tags);
     setSelectedUser(user);
-    setSelectedApis(user.enabledApis || []);
+    setSelectedApis(
+      groupAllowedApiKeys
+        ? (user.enabledApis || []).filter((apiKey) => groupAllowedApiKeys.has(apiKey))
+        : user.enabledApis || []
+    );
     setShowConfigureApisModal(true);
   };
 
@@ -843,7 +883,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       <span className='text-sm text-gray-900 dark:text-gray-100'>
                         {group.enabledApis && group.enabledApis.length > 0
                           ? `${group.enabledApis.length} 个源`
-                          : '无限制'}
+                          : '0 个源'}
                       </span>
                     </div>
                   </td>
@@ -953,7 +993,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   <option value=''>无用户组（无限制）</option>
                   {userGroups.map((group) => (
                     <option key={group.name} value={group.name}>
-                      {group.name} ({group.enabledApis && group.enabledApis.length > 0 ? `${group.enabledApis.length} 个源` : '无限制'})
+                      {group.name} ({group.enabledApis && group.enabledApis.length > 0 ? `${group.enabledApis.length} 个源` : '0 个源'})
                     </option>
                   ))}
                 </select>
@@ -1191,9 +1231,11 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         <td className='px-6 py-4 whitespace-nowrap'>
                           <div className='flex items-center space-x-2'>
                             <span className='text-sm text-gray-900 dark:text-gray-100'>
-                              {user.enabledApis && user.enabledApis.length > 0
-                                ? `${user.enabledApis.length} 个源`
-                                : '无限制'}
+                              {getEffectiveUserApiCount(user) !== null
+                                ? `${getEffectiveUserApiCount(user)} 个源`
+                                : user.tags && user.tags.length > 0
+                                  ? '用户组上限'
+                                  : '无限制'}
                             </span>
                             {/* 配置采集源权限按钮 */}
                             {(role === 'owner' ||
@@ -1324,7 +1366,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     </span>
                   </div>
                   <p className='text-sm text-blue-700 dark:text-blue-400 mt-1'>
-                    提示：全不选为无限制，选中的采集源将限制用户只能访问这些源
+                    提示：用户组是采集源上限；未选择个人采集源时，不额外收窄用户组权限
                   </p>
                 </div>
               </div>
@@ -1335,7 +1377,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   选择可用的采集源：
                 </h4>
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {config?.SourceConfig?.map((source) => (
+                  {getSelectableSourcesForUser(selectedUser).map((source) => (
                     <label key={source.key} className='flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors'>
                       <input
                         type='checkbox'
@@ -1371,11 +1413,11 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     onClick={() => setSelectedApis([])}
                     className={buttonStyles.quickAction}
                   >
-                    全不选（无限制）
+                    清除个人限制
                   </button>
                   <button
                     onClick={() => {
-                      const allApis = config?.SourceConfig?.filter(source => !source.disabled).map(s => s.key) || [];
+                      const allApis = getSelectableSourcesForUser(selectedUser).filter(source => !source.disabled).map(s => s.key);
                       setSelectedApis(allApis);
                     }}
                     className={buttonStyles.quickAction}
@@ -1385,7 +1427,13 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 </div>
                 <div className='text-sm text-gray-600 dark:text-gray-400'>
                   已选择：<span className='font-medium text-blue-600 dark:text-blue-400'>
-                    {selectedApis.length > 0 ? `${selectedApis.length} 个源` : '无限制'}
+                    {selectedApis.length > 0
+                      ? `${selectedApis.length} 个源`
+                      : selectedUser?.tags && selectedUser.tags.length > 0
+                        ? getSelectableSourcesForUser(selectedUser).length > 0
+                          ? '使用用户组全部源'
+                          : '用户组未允许任何源'
+                        : '无限制'}
                   </span>
                 </div>
               </div>
@@ -1504,7 +1552,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       onClick={() => setNewUserGroup(prev => ({ ...prev, enabledApis: [] }))}
                       className={buttonStyles.quickAction}
                     >
-                      全不选（无限制）
+                      全不选（不允许任何源）
                     </button>
                     <button
                       onClick={() => {
@@ -1616,7 +1664,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       onClick={() => setEditingUserGroup(prev => prev ? { ...prev, enabledApis: [] } : null)}
                       className={buttonStyles.quickAction}
                     >
-                      全不选（无限制）
+                      全不选（不允许任何源）
                     </button>
                     <button
                       onClick={() => {
@@ -1715,7 +1763,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   <option value=''>无用户组（无限制）</option>
                   {userGroups.map((group) => (
                     <option key={group.name} value={group.name}>
-                      {group.name} {group.enabledApis && group.enabledApis.length > 0 ? `(${group.enabledApis.length} 个源)` : ''}
+                      {group.name} {group.enabledApis && group.enabledApis.length > 0 ? `(${group.enabledApis.length} 个源)` : '(0 个源)'}
                     </option>
                   ))}
                 </select>
@@ -1969,7 +2017,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     <option value=''>无用户组（无限制）</option>
                     {userGroups.map((group) => (
                       <option key={group.name} value={group.name}>
-                        {group.name} {group.enabledApis && group.enabledApis.length > 0 ? `(${group.enabledApis.length} 个源)` : ''}
+                        {group.name} {group.enabledApis && group.enabledApis.length > 0 ? `(${group.enabledApis.length} 个源)` : '(0 个源)'}
                       </option>
                     ))}
                   </select>
@@ -3392,7 +3440,6 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
     DoubanProxy: '',
     DoubanImageProxyType: 'cmliussss-cdn-tencent',
     DoubanImageProxy: '',
-    DisableYellowFilter: false,
     FluidSearch: true,
     EnableWebLive: false,
   });
@@ -3455,7 +3502,6 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
             ? 'server'
             : (config.SiteConfig.DoubanImageProxyType || 'cmliussss-cdn-tencent'),
         DoubanImageProxy: config.SiteConfig.DoubanImageProxy || '',
-        DisableYellowFilter: config.SiteConfig.DisableYellowFilter || false,
         FluidSearch: config.SiteConfig.FluidSearch || true,
         EnableWebLive: config.SiteConfig.EnableWebLive ?? false,
       });
@@ -3840,40 +3886,6 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
           }
           className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
         />
-      </div>
-
-      {/* 禁用黄色过滤器 */}
-      <div>
-        <div className='flex items-center justify-between'>
-          <label
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            禁用黄色过滤器
-          </label>
-          <button
-            type='button'
-            onClick={() =>
-              setSiteSettings((prev) => ({
-                ...prev,
-                DisableYellowFilter: !prev.DisableYellowFilter,
-              }))
-            }
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${siteSettings.DisableYellowFilter
-              ? buttonStyles.toggleOn
-              : buttonStyles.toggleOff
-              }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full ${buttonStyles.toggleThumb} transition-transform ${siteSettings.DisableYellowFilter
-                ? buttonStyles.toggleThumbOn
-                : buttonStyles.toggleThumbOff
-                }`}
-            />
-          </button>
-        </div>
-        <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-          禁用黄色内容的过滤功能，允许显示所有内容。
-        </p>
       </div>
 
       {/* 流式搜索 */}

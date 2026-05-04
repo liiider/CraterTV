@@ -14,7 +14,6 @@ export interface AdminConfig {
     DoubanProxy: string;
     DoubanImageProxyType: string;
     DoubanImageProxy: string;
-    DisableYellowFilter: boolean;
     FluidSearch: boolean;
     EnableWebLive: boolean;
   };

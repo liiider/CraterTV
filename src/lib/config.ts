@@ -214,8 +214,6 @@ async function getInitConfig(configFile: string, subConfig: {
       DoubanImageProxyType:
         process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'cmliussss-cdn-tencent',
       DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
-      DisableYellowFilter:
-        process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
       FluidSearch:
         process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false',
       EnableWebLive: false,
@@ -420,51 +418,51 @@ export async function getCacheTime(): Promise<number> {
 export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
   const config = await getConfig();
   const allApiSites = config.SourceConfig.filter((s) => !s.disabled);
-
-  if (!user) {
-    return allApiSites;
-  }
-
-  const userConfig = config.UserConfig.Users.find((u) => u.username === user);
-  if (!userConfig) {
-    return allApiSites;
-  }
-
-  // 优先根据用户自己的 enabledApis 配置查找
-  if (userConfig.enabledApis && userConfig.enabledApis.length > 0) {
-    const userApiSitesSet = new Set(userConfig.enabledApis);
-    return allApiSites.filter((s) => userApiSitesSet.has(s.key)).map((s) => ({
+  const toApiSites = (sites: typeof allApiSites): ApiSite[] =>
+    sites.map((s) => ({
       key: s.key,
       name: s.name,
       api: s.api,
       detail: s.detail,
     }));
+
+  if (!user) {
+    return toApiSites(allApiSites);
   }
 
-  // 如果没有 enabledApis 配置，则根据 tags 查找
-  if (userConfig.tags && userConfig.tags.length > 0 && config.UserConfig.Tags) {
-    const enabledApisFromTags = new Set<string>();
+  const userConfig = config.UserConfig.Users.find((u) => u.username === user);
+  if (!userConfig) {
+    return [];
+  }
 
-    // 遍历用户的所有 tags，收集对应的 enabledApis
+  let groupApiSitesSet: Set<string> | null = null;
+  if (userConfig.tags && userConfig.tags.length > 0) {
+    groupApiSitesSet = new Set<string>();
+
     userConfig.tags.forEach(tagName => {
       const tagConfig = config.UserConfig.Tags?.find(t => t.name === tagName);
       if (tagConfig && tagConfig.enabledApis) {
-        tagConfig.enabledApis.forEach(apiKey => enabledApisFromTags.add(apiKey));
+        tagConfig.enabledApis.forEach(apiKey => groupApiSitesSet?.add(apiKey));
       }
     });
+  }
 
-    if (enabledApisFromTags.size > 0) {
-      return allApiSites.filter((s) => enabledApisFromTags.has(s.key)).map((s) => ({
-        key: s.key,
-        name: s.name,
-        api: s.api,
-        detail: s.detail,
-      }));
-    }
+  if (userConfig.enabledApis) {
+    const userApiSitesSet = new Set(userConfig.enabledApis);
+    return toApiSites(
+      allApiSites.filter((s) =>
+        userApiSitesSet.has(s.key) &&
+        (!groupApiSitesSet || groupApiSitesSet.has(s.key))
+      )
+    );
+  }
+
+  if (groupApiSitesSet) {
+    return toApiSites(allApiSites.filter((s) => groupApiSitesSet.has(s.key)));
   }
 
   // 如果都没有配置，返回所有可用的 API 站点
-  return allApiSites;
+  return toApiSites(allApiSites);
 }
 
 export async function setCachedConfig(config: AdminConfig) {

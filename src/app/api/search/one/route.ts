@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
+import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
-import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -33,7 +32,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
   try {
@@ -50,13 +48,7 @@ export async function GET(request: NextRequest) {
     }
 
     const results = await searchFromApi(targetSite, query);
-    let result = results.filter((r) => r.title === query);
-    if (!config.SiteConfig.DisableYellowFilter) {
-      result = result.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
-    }
+    const result = results.filter((r) => r.title === query);
     const cacheTime = await getCacheTime();
 
     if (result.length === 0) {

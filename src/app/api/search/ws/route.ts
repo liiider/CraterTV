@@ -3,9 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getConfig } from '@/lib/config';
+import { getAvailableApiSites } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
-import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +29,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
   // 共享状态
@@ -87,15 +85,6 @@ export async function GET(request: NextRequest) {
 
           const results = await searchPromise as any[];
 
-          // 过滤黄色内容
-          let filteredResults = results;
-          if (!config.SiteConfig.DisableYellowFilter) {
-            filteredResults = results.filter((result) => {
-              const typeName = result.type_name || '';
-              return !yellowWords.some((word: string) => typeName.includes(word));
-            });
-          }
-
           // 发送该源的搜索结果
           completedSources++;
 
@@ -104,7 +93,7 @@ export async function GET(request: NextRequest) {
               type: 'source_result',
               source: site.key,
               sourceName: site.name,
-              results: filteredResults,
+              results,
               timestamp: Date.now()
             })}\n\n`;
 
@@ -114,8 +103,8 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          if (filteredResults.length > 0) {
-            allResults.push(...filteredResults);
+          if (results.length > 0) {
+            allResults.push(...results);
           }
 
         } catch (error) {

@@ -3,9 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
+import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
-import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
   // 添加超时控制和错误处理，避免慢接口拖累整体响应
@@ -56,13 +54,7 @@ export async function GET(request: NextRequest) {
     const successResults = results
       .filter((result) => result.status === 'fulfilled')
       .map((result) => (result as PromiseFulfilledResult<any>).value);
-    let flattenedResults = successResults.flat();
-    if (!config.SiteConfig.DisableYellowFilter) {
-      flattenedResults = flattenedResults.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
-    }
+    const flattenedResults = successResults.flat();
     const cacheTime = await getCacheTime();
 
     if (flattenedResults.length === 0) {
