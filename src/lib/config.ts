@@ -458,7 +458,8 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
   }
 
   if (groupApiSitesSet) {
-    return toApiSites(allApiSites.filter((s) => groupApiSitesSet.has(s.key)));
+    const allowedApiKeys = groupApiSitesSet;
+    return toApiSites(allApiSites.filter((s) => allowedApiKeys.has(s.key)));
   }
 
   // 如果都没有配置，返回所有可用的 API 站点
