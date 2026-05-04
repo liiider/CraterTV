@@ -7,6 +7,10 @@ import { getAvailableApiSites } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
+const noStoreHeaders = {
+  'Cache-Control': 'no-store',
+};
+
 // OrionTV 兼容接口
 export async function GET(request: NextRequest) {
   const authInfo = getAuthInfoFromCookie(request);
@@ -16,7 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const apiSites = await getAvailableApiSites(authInfo.username);
 
-    return NextResponse.json(apiSites);
+    return NextResponse.json(apiSites, { headers: noStoreHeaders });
   } catch (error) {
     return NextResponse.json({ error: '获取资源失败' }, { status: 500 });
   }

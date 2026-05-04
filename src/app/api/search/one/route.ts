@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getCacheTime } from '@/lib/config';
+import { getAvailableApiSites } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 
 export const runtime = 'nodejs';
+
+const noStoreHeaders = {
+  'Cache-Control': 'no-store',
+};
 
 // OrionTV 兼容接口
 export async function GET(request: NextRequest) {
@@ -18,16 +22,10 @@ export async function GET(request: NextRequest) {
   const resourceId = searchParams.get('resourceId');
 
   if (!query || !resourceId) {
-    const cacheTime = await getCacheTime();
     return NextResponse.json(
       { result: null, error: '缺少必要参数: q 或 resourceId' },
       {
-        headers: {
-          'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-          'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Netlify-Vary': 'query',
-        },
+        headers: noStoreHeaders,
       }
     );
   }
@@ -49,8 +47,6 @@ export async function GET(request: NextRequest) {
 
     const results = await searchFromApi(targetSite, query);
     const result = results.filter((r) => r.title === query);
-    const cacheTime = await getCacheTime();
-
     if (result.length === 0) {
       return NextResponse.json(
         {
@@ -63,12 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { results: result },
         {
-          headers: {
-            'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-            'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-            'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-            'Netlify-Vary': 'query',
-          },
+          headers: noStoreHeaders,
         }
       );
     }

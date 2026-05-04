@@ -3,12 +3,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getConfig } from '@/lib/config';
+import { getAvailableApiSites } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const noStoreHeaders = {
+  'Cache-Control': 'no-store',
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,29 +21,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const config = await getConfig();
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.trim();
 
     if (!query) {
-      return NextResponse.json({ suggestions: [] });
+      return NextResponse.json({ suggestions: [] }, { headers: noStoreHeaders });
     }
 
     // 生成建议
     const suggestions = await generateSuggestions(query, authInfo.username);
 
-    // 从配置中获取缓存时间，如果没有配置则使用默认值300秒（5分钟）
-    const cacheTime = config.SiteConfig.SiteInterfaceCacheTime || 300;
-
     return NextResponse.json(
       { suggestions },
       {
-        headers: {
-          'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-          'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Netlify-Vary': 'query',
-        },
+        headers: noStoreHeaders,
       }
     );
   } catch (error) {

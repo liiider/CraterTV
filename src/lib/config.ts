@@ -343,7 +343,6 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
     return true;
   });
   // 过滤站长
-  const originOwnerCfg = adminConfig.UserConfig.Users.find((u) => u.username === ownerUser);
   adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter((user) => user.username !== ownerUser);
   // 其他用户不得拥有 owner 权限
   adminConfig.UserConfig.Users.forEach((user) => {
@@ -356,8 +355,6 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
     username: ownerUser!,
     role: 'owner',
     banned: false,
-    enabledApis: originOwnerCfg?.enabledApis || undefined,
-    tags: originOwnerCfg?.tags || undefined,
   });
 
   // 采集源去重
@@ -430,6 +427,10 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
     return toApiSites(allApiSites);
   }
 
+  if (user === process.env.USERNAME) {
+    return toApiSites(allApiSites);
+  }
+
   const userConfig = config.UserConfig.Users.find((u) => u.username === user);
   if (!userConfig) {
     return [];
@@ -449,11 +450,17 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
 
   if (userConfig.enabledApis) {
     const userApiSitesSet = new Set(userConfig.enabledApis);
+    if (groupApiSitesSet) {
+      const allowedByGroup = groupApiSitesSet;
+      return toApiSites(
+        allApiSites.filter((s) =>
+          userApiSitesSet.has(s.key) && allowedByGroup.has(s.key)
+        )
+      );
+    }
+
     return toApiSites(
-      allApiSites.filter((s) =>
-        userApiSitesSet.has(s.key) &&
-        (!groupApiSitesSet || groupApiSitesSet.has(s.key))
-      )
+      allApiSites.filter((s) => userApiSitesSet.has(s.key))
     );
   }
 

@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import type { AdminConfig } from '@/lib/admin.types';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -22,6 +23,55 @@ const ACTIONS = [
   'updateUserGroups',
   'batchUpdateUserGroups',
 ] as const;
+
+type UserEntry = AdminConfig['UserConfig']['Users'][number];
+
+function normalizeEnabledApis(enabledApis: unknown, sourceKeys: Set<string>) {
+  return Array.isArray(enabledApis)
+    ? Array.from(new Set(enabledApis)).filter(
+      (apiKey): apiKey is string =>
+        typeof apiKey === 'string' && sourceKeys.has(apiKey)
+    )
+    : [];
+}
+
+function getGroupUpperBound(
+  adminConfig: AdminConfig,
+  groupNames?: string[]
+): Set<string> | null {
+  if (!groupNames || groupNames.length === 0) {
+    return null;
+  }
+
+  const groupUpperBound = new Set<string>();
+  groupNames.forEach((tagName) => {
+    const tagConfig = adminConfig.UserConfig.Tags?.find((t) => t.name === tagName);
+    tagConfig?.enabledApis?.forEach((apiKey) => groupUpperBound.add(apiKey));
+  });
+
+  return groupUpperBound;
+}
+
+function pruneUserApisToGroupUpperBound(
+  adminConfig: AdminConfig,
+  user: UserEntry
+) {
+  if (user.username === process.env.USERNAME) {
+    delete user.enabledApis;
+    delete user.tags;
+    return;
+  }
+
+  const groupUpperBound = getGroupUpperBound(adminConfig, user.tags);
+  if (!groupUpperBound || !user.enabledApis) {
+    return;
+  }
+
+  user.enabledApis = user.enabledApis.filter((apiKey) => groupUpperBound.has(apiKey));
+  if (user.enabledApis.length === 0) {
+    delete user.enabledApis;
+  }
+}
 
 export async function POST(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
@@ -320,20 +370,17 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const sourceKeys = new Set(adminConfig.SourceConfig.map((s) => s.key));
-        const normalizedEnabledApis = Array.isArray(enabledApis)
-          ? Array.from(new Set(enabledApis)).filter((apiKey) => sourceKeys.has(apiKey))
-          : [];
-        const groupUpperBound = new Set<string>();
-        const hasGroupUpperBound = targetEntry.tags && targetEntry.tags.length > 0;
-        if (hasGroupUpperBound) {
-          targetEntry.tags.forEach((tagName: string) => {
-            const tagConfig = adminConfig.UserConfig.Tags?.find((t) => t.name === tagName);
-            tagConfig?.enabledApis?.forEach((apiKey) => groupUpperBound.add(apiKey));
-          });
+        if (targetEntry.username === process.env.USERNAME) {
+          delete targetEntry.enabledApis;
+          delete targetEntry.tags;
+          break;
         }
 
-        if (hasGroupUpperBound) {
+        const sourceKeys = new Set(adminConfig.SourceConfig.map((s) => s.key));
+        const normalizedEnabledApis = normalizeEnabledApis(enabledApis, sourceKeys);
+        const groupUpperBound = getGroupUpperBound(adminConfig, targetEntry.tags);
+
+        if (groupUpperBound) {
           const disallowedApis = normalizedEnabledApis.filter((apiKey) => !groupUpperBound.has(apiKey));
           if (disallowedApis.length > 0) {
             return NextResponse.json(
@@ -365,6 +412,9 @@ export async function POST(request: NextRequest) {
           adminConfig.UserConfig.Tags = [];
         }
 
+        const sourceKeys = new Set(adminConfig.SourceConfig.map((s) => s.key));
+        const normalizedEnabledApis = normalizeEnabledApis(enabledApis, sourceKeys);
+
         switch (groupAction) {
           case 'add': {
             // 检查用户组是否已存在
@@ -373,7 +423,7 @@ export async function POST(request: NextRequest) {
             }
             adminConfig.UserConfig.Tags.push({
               name: groupName,
-              enabledApis: enabledApis || [],
+              enabledApis: normalizedEnabledApis,
             });
             break;
           }
@@ -382,7 +432,10 @@ export async function POST(request: NextRequest) {
             if (groupIndex === -1) {
               return NextResponse.json({ error: '用户组不存在' }, { status: 404 });
             }
-            adminConfig.UserConfig.Tags[groupIndex].enabledApis = enabledApis || [];
+            adminConfig.UserConfig.Tags[groupIndex].enabledApis = normalizedEnabledApis;
+            adminConfig.UserConfig.Users
+              .filter((user) => user.tags?.includes(groupName))
+              .forEach((user) => pruneUserApisToGroupUpperBound(adminConfig, user));
             break;
           }
           case 'delete': {
@@ -435,12 +488,20 @@ export async function POST(request: NextRequest) {
         }
 
         // 更新用户的用户组
+        if (targetEntry.username === process.env.USERNAME) {
+          delete targetEntry.enabledApis;
+          delete targetEntry.tags;
+          break;
+        }
+
         if (userGroups && userGroups.length > 0) {
           targetEntry.tags = userGroups;
         } else {
           // 如果为空数组或未提供，则删除该字段，表示无用户组
           delete targetEntry.tags;
         }
+
+        pruneUserApisToGroupUpperBound(adminConfig, targetEntry);
 
         break;
       }
@@ -471,6 +532,7 @@ export async function POST(request: NextRequest) {
               // 如果为空数组或未提供，则删除该字段，表示无用户组
               delete targetUser.tags;
             }
+            pruneUserApisToGroupUpperBound(adminConfig, targetUser);
           }
         }
 
