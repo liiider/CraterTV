@@ -3,10 +3,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites } from '@/lib/config';
+import { getAvailableApiSites, getSafeSearchApiSite } from '@/lib/config';
 import {
   getCanonicalSearchTitles,
   searchExactTitlesFromSite,
+  searchFromApiSiteWithTimeout,
 } from '@/lib/safe-search';
 
 export const runtime = 'nodejs';
@@ -29,7 +30,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const apiSites = await getAvailableApiSites(authInfo.username);
+  const [apiSites, safeSearchSite] = await Promise.all([
+    getAvailableApiSites(authInfo.username),
+    getSafeSearchApiSite(authInfo.username),
+  ]);
   let streamClosed = false;
 
   const stream = new ReadableStream({
@@ -78,22 +82,31 @@ export async function GET(request: NextRequest) {
         return;
       }
 
-      let canonicalTitles: string[] = [];
-      try {
-        canonicalTitles = await getCanonicalSearchTitles(apiSites[0], query);
-      } catch (error) {
-        console.warn(`Canonical search failed ${apiSites[0].name}:`, error);
-      }
+      let canonicalTitles: string[] | null = null;
+      if (safeSearchSite) {
+        canonicalTitles = [];
+        try {
+          canonicalTitles = await getCanonicalSearchTitles(
+            safeSearchSite,
+            query
+          );
+        } catch (error) {
+          console.warn(
+            `Canonical search failed ${safeSearchSite.name}:`,
+            error
+          );
+        }
 
-      if (canonicalTitles.length === 0) {
-        sendEvent({
-          type: 'complete',
-          totalResults: 0,
-          completedSources: apiSites.length,
-          timestamp: Date.now(),
-        });
-        controller.close();
-        return;
+        if (canonicalTitles.length === 0) {
+          sendEvent({
+            type: 'complete',
+            totalResults: 0,
+            completedSources: apiSites.length,
+            timestamp: Date.now(),
+          });
+          controller.close();
+          return;
+        }
       }
 
       let completedSources = 0;
@@ -101,10 +114,9 @@ export async function GET(request: NextRequest) {
 
       const searchPromises = apiSites.map(async (site) => {
         try {
-          const results = await searchExactTitlesFromSite(
-            site,
-            canonicalTitles
-          );
+          const results = canonicalTitles
+            ? await searchExactTitlesFromSite(site, canonicalTitles)
+            : await searchFromApiSiteWithTimeout(site, query);
           completedSources++;
 
           if (!streamClosed) {

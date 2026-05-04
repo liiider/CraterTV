@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites } from '@/lib/config';
+import { getAvailableApiSites, getSafeSearchApiSite } from '@/lib/config';
 import { safeSearchFromApiSites } from '@/lib/safe-search';
 
 export const runtime = 'nodejs';
@@ -29,10 +29,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const apiSites = await getAvailableApiSites(authInfo.username);
+  const [apiSites, safeSearchSite] = await Promise.all([
+    getAvailableApiSites(authInfo.username),
+    getSafeSearchApiSite(authInfo.username),
+  ]);
 
   try {
-    const results = await safeSearchFromApiSites(apiSites, query);
+    const results = await safeSearchFromApiSites(
+      apiSites,
+      query,
+      safeSearchSite
+    );
 
     if (results.length === 0) {
       return NextResponse.json(

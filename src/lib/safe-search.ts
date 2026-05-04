@@ -40,7 +40,10 @@ function dedupeResults(results: SearchResult[]) {
   });
 }
 
-async function searchWithTimeout(site: ApiSite, query: string) {
+export async function searchFromApiSiteWithTimeout(
+  site: ApiSite,
+  query: string
+) {
   return Promise.race([
     searchFromApi(site, query),
     new Promise<SearchResult[]>((_, reject) =>
@@ -56,7 +59,7 @@ export async function getCanonicalSearchTitles(
   safeSite: ApiSite,
   query: string
 ) {
-  const preSearchResults = await searchWithTimeout(safeSite, query);
+  const preSearchResults = await searchFromApiSiteWithTimeout(safeSite, query);
   return uniqueTitles(preSearchResults);
 }
 
@@ -67,7 +70,7 @@ export async function searchExactTitlesFromSite(
   const results = await Promise.all(
     titles.map(async (title) => {
       const normalizedTitle = normalizeSearchTitle(title);
-      const siteResults = await searchWithTimeout(site, title);
+      const siteResults = await searchFromApiSiteWithTimeout(site, title);
       return siteResults.filter(
         (result) => normalizeSearchTitle(result.title || '') === normalizedTitle
       );
@@ -79,13 +82,21 @@ export async function searchExactTitlesFromSite(
 
 export async function safeSearchFromApiSites(
   apiSites: ApiSite[],
-  query: string
+  query: string,
+  safeSite?: ApiSite | null
 ) {
   if (apiSites.length === 0) {
     return [];
   }
 
-  const canonicalTitles = await getCanonicalSearchTitles(apiSites[0], query);
+  if (!safeSite) {
+    const results = await Promise.all(
+      apiSites.map((site) => searchFromApiSiteWithTimeout(site, query))
+    );
+    return dedupeResults(results.flat());
+  }
+
+  const canonicalTitles = await getCanonicalSearchTitles(safeSite, query);
   if (canonicalTitles.length === 0) {
     return [];
   }
