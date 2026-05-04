@@ -5,7 +5,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import MultiLevelSelector from './MultiLevelSelector';
-import WeekdaySelector from './WeekdaySelector';
 
 interface SelectorOption {
   label: string;
@@ -19,7 +18,6 @@ interface DoubanSelectorProps {
   onPrimaryChange: (value: string) => void;
   onSecondaryChange: (value: string) => void;
   onMultiLevelChange?: (values: Record<string, string>) => void;
-  onWeekdayChange: (weekday: string) => void;
 }
 
 const DoubanSelector: React.FC<DoubanSelectorProps> = ({
@@ -29,7 +27,6 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
   onPrimaryChange,
   onSecondaryChange,
   onMultiLevelChange,
-  onWeekdayChange,
 }) => {
   // 为不同的选择器创建独立的refs和状态
   const primaryContainerRef = useRef<HTMLDivElement>(null);
@@ -96,7 +93,6 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
 
   // 动漫一级选择器选项
   const animePrimaryOptions: SelectorOption[] = [
-    { label: '每日放送', value: '每日放送' },
     { label: '番剧', value: '番剧' },
     { label: '剧场版', value: '剧场版' },
   ];
@@ -472,41 +468,27 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
             </div>
           </div>
 
-          {/* 筛选部分 - 根据一级选择器显示不同内容 */}
-          {(primarySelection || animePrimaryOptions[0].value) === '每日放送' ? (
-            // 每日放送分类下显示星期选择器
-            <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-              <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
-                星期
-              </span>
-              <div className='overflow-x-auto'>
-                <WeekdaySelector onWeekdayChange={onWeekdayChange} />
-              </div>
+          <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
+            <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
+              筛选
+            </span>
+            <div className='overflow-x-auto'>
+              {(primarySelection || animePrimaryOptions[0].value) ===
+              '番剧' ? (
+                <MultiLevelSelector
+                  key={`anime-tv-${primarySelection}`}
+                  onChange={handleMultiLevelChange}
+                  contentType='anime-tv'
+                />
+              ) : (
+                <MultiLevelSelector
+                  key={`anime-movie-${primarySelection}`}
+                  onChange={handleMultiLevelChange}
+                  contentType='anime-movie'
+                />
+              )}
             </div>
-          ) : (
-            // 其他分类下显示原有的筛选功能
-            <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-              <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
-                筛选
-              </span>
-              <div className='overflow-x-auto'>
-                {(primarySelection || animePrimaryOptions[0].value) ===
-                '番剧' ? (
-                  <MultiLevelSelector
-                    key={`anime-tv-${primarySelection}`}
-                    onChange={handleMultiLevelChange}
-                    contentType='anime-tv'
-                  />
-                ) : (
-                  <MultiLevelSelector
-                    key={`anime-movie-${primarySelection}`}
-                    onChange={handleMultiLevelChange}
-                    contentType='anime-movie'
-                  />
-                )}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
