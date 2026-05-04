@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console */
-
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites } from '@/lib/config';
-import { searchFromApi } from '@/lib/downstream';
+import { safeSearchFromApiSites } from '@/lib/safe-search';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
+  const query = searchParams.get('q')?.trim();
 
   if (!query) {
     return NextResponse.json(
@@ -33,28 +31,10 @@ export async function GET(request: NextRequest) {
 
   const apiSites = await getAvailableApiSites(authInfo.username);
 
-  // 添加超时控制和错误处理，避免慢接口拖累整体响应
-  const searchPromises = apiSites.map((site) =>
-    Promise.race([
-      searchFromApi(site, query),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
-      ),
-    ]).catch((err) => {
-      console.warn(`搜索失败 ${site.name}:`, err.message);
-      return []; // 返回空数组而不是抛出错误
-    })
-  );
-
   try {
-    const results = await Promise.allSettled(searchPromises);
-    const successResults = results
-      .filter((result) => result.status === 'fulfilled')
-      .map((result) => (result as PromiseFulfilledResult<any>).value);
-    const flattenedResults = successResults.flat();
+    const results = await safeSearchFromApiSites(apiSites, query);
 
-    if (flattenedResults.length === 0) {
-      // no cache if empty
+    if (results.length === 0) {
       return NextResponse.json(
         { results: [] },
         { status: 200, headers: noStoreHeaders }
@@ -62,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { results: flattenedResults },
+      { results },
       {
         headers: noStoreHeaders,
       }

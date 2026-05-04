@@ -1,10 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console */
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites } from '@/lib/config';
-import { searchFromApi } from '@/lib/downstream';
+import {
+  getCanonicalSearchTitles,
+  searchExactTitlesFromSite,
+} from '@/lib/safe-search';
 
 export const runtime = 'nodejs';
 
@@ -15,160 +18,165 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
+  const query = searchParams.get('q')?.trim();
 
   if (!query) {
-    return new Response(
-      JSON.stringify({ error: '搜索关键词不能为空' }),
-      {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: '搜索关键词不能为空' }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
   const apiSites = await getAvailableApiSites(authInfo.username);
-
-  // 共享状态
   let streamClosed = false;
 
-  // 创建可读流
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
 
-      // 辅助函数：安全地向控制器写入数据
       const safeEnqueue = (data: Uint8Array) => {
         try {
-          if (streamClosed || (!controller.desiredSize && controller.desiredSize !== 0)) {
-            // 流已标记为关闭或控制器已关闭
+          if (
+            streamClosed ||
+            (!controller.desiredSize && controller.desiredSize !== 0)
+          ) {
             return false;
           }
           controller.enqueue(data);
           return true;
         } catch (error) {
-          // 控制器已关闭或出现其他错误
           console.warn('Failed to enqueue data:', error);
           streamClosed = true;
           return false;
         }
       };
 
-      // 发送开始事件
-      const startEvent = `data: ${JSON.stringify({
-        type: 'start',
-        query,
-        totalSources: apiSites.length,
-        timestamp: Date.now()
-      })}\n\n`;
+      const sendEvent = (payload: Record<string, unknown>) =>
+        safeEnqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
 
-      if (!safeEnqueue(encoder.encode(startEvent))) {
-        return; // 连接已关闭，提前退出
+      if (
+        !sendEvent({
+          type: 'start',
+          query,
+          totalSources: apiSites.length,
+          timestamp: Date.now(),
+        })
+      ) {
+        return;
       }
 
-      // 记录已完成的源数量
-      let completedSources = 0;
-      const allResults: any[] = [];
+      if (apiSites.length === 0) {
+        sendEvent({
+          type: 'complete',
+          totalResults: 0,
+          completedSources: 0,
+          timestamp: Date.now(),
+        });
+        controller.close();
+        return;
+      }
 
-      // 为每个源创建搜索 Promise
+      let canonicalTitles: string[] = [];
+      try {
+        canonicalTitles = await getCanonicalSearchTitles(apiSites[0], query);
+      } catch (error) {
+        console.warn(`Canonical search failed ${apiSites[0].name}:`, error);
+      }
+
+      if (canonicalTitles.length === 0) {
+        sendEvent({
+          type: 'complete',
+          totalResults: 0,
+          completedSources: apiSites.length,
+          timestamp: Date.now(),
+        });
+        controller.close();
+        return;
+      }
+
+      let completedSources = 0;
+      const allResults: unknown[] = [];
+
       const searchPromises = apiSites.map(async (site) => {
         try {
-          // 添加超时控制
-          const searchPromise = Promise.race([
-            searchFromApi(site, query),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
-            ),
-          ]);
-
-          const results = await searchPromise as any[];
-
-          // 发送该源的搜索结果
+          const results = await searchExactTitlesFromSite(
+            site,
+            canonicalTitles
+          );
           completedSources++;
 
           if (!streamClosed) {
-            const sourceEvent = `data: ${JSON.stringify({
-              type: 'source_result',
-              source: site.key,
-              sourceName: site.name,
-              results,
-              timestamp: Date.now()
-            })}\n\n`;
-
-            if (!safeEnqueue(encoder.encode(sourceEvent))) {
+            if (
+              !sendEvent({
+                type: 'source_result',
+                source: site.key,
+                sourceName: site.name,
+                results,
+                timestamp: Date.now(),
+              })
+            ) {
               streamClosed = true;
-              return; // 连接已关闭，停止处理
+              return;
             }
           }
 
           if (results.length > 0) {
             allResults.push(...results);
           }
-
         } catch (error) {
           console.warn(`搜索失败 ${site.name}:`, error);
-
-          // 发送源错误事件
           completedSources++;
 
           if (!streamClosed) {
-            const errorEvent = `data: ${JSON.stringify({
-              type: 'source_error',
-              source: site.key,
-              sourceName: site.name,
-              error: error instanceof Error ? error.message : '搜索失败',
-              timestamp: Date.now()
-            })}\n\n`;
-
-            if (!safeEnqueue(encoder.encode(errorEvent))) {
+            if (
+              !sendEvent({
+                type: 'source_error',
+                source: site.key,
+                sourceName: site.name,
+                error: error instanceof Error ? error.message : '搜索失败',
+                timestamp: Date.now(),
+              })
+            ) {
               streamClosed = true;
-              return; // 连接已关闭，停止处理
+              return;
             }
           }
         }
 
-        // 检查是否所有源都已完成
-        if (completedSources === apiSites.length) {
-          if (!streamClosed) {
-            // 发送最终完成事件
-            const completeEvent = `data: ${JSON.stringify({
+        if (completedSources === apiSites.length && !streamClosed) {
+          if (
+            sendEvent({
               type: 'complete',
               totalResults: allResults.length,
               completedSources,
-              timestamp: Date.now()
-            })}\n\n`;
-
-            if (safeEnqueue(encoder.encode(completeEvent))) {
-              // 只有在成功发送完成事件后才关闭流
-              try {
-                controller.close();
-              } catch (error) {
-                console.warn('Failed to close controller:', error);
-              }
+              timestamp: Date.now(),
+            })
+          ) {
+            try {
+              controller.close();
+            } catch (error) {
+              console.warn('Failed to close controller:', error);
             }
           }
         }
       });
 
-      // 等待所有搜索完成
       await Promise.allSettled(searchPromises);
     },
 
     cancel() {
-      // 客户端断开连接时，标记流已关闭
       streamClosed = true;
       console.log('Client disconnected, cancelling search stream');
     },
   });
 
-  // 返回流式响应
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-store',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET',
       'Access-Control-Allow-Headers': 'Content-Type',
