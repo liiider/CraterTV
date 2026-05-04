@@ -436,6 +436,10 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
     return [];
   }
 
+  if (userConfig.banned) {
+    return [];
+  }
+
   let groupApiSitesSet: Set<string> | null = null;
   if (userConfig.tags && userConfig.tags.length > 0) {
     groupApiSitesSet = new Set<string>();

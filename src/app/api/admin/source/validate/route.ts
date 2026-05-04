@@ -30,6 +30,15 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
+  if (authInfo.username !== process.env.USERNAME) {
+    const user = config.UserConfig.Users.find(
+      (u) => u.username === authInfo.username
+    );
+    if (!user || user.role !== 'admin' || user.banned) {
+      return NextResponse.json({ error: '权限不足' }, { status: 401 });
+    }
+  }
+
   const apiSites = config.SourceConfig;
 
   // 共享状态
@@ -189,7 +198,7 @@ export async function GET(request: NextRequest) {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-store',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET',
