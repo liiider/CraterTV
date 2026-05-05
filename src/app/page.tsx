@@ -80,6 +80,11 @@ function HomeClient() {
               kind: 'tv',
               category: '动画',
               format: '电视剧',
+              label: '',
+              region: '',
+              year: '',
+              platform: '',
+              sort: '',
             }),
           ]);
 
