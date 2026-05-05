@@ -6,7 +6,7 @@
 
 CraterTV 是一个基于 Next.js 的影视聚合与播放管理工具。项目不内置任何播放源或直播源，部署后需要站长自行配置采集源、用户和站点信息。
 
-本分支重点收紧了用户权限模型，用户组支持配置安全预搜索，并简化了动漫分类：动漫页保留 `番剧` 和 `剧场版`，默认进入 `番剧`，不再提供 Bangumi 每日放送分类。
+本分支重点收紧了用户权限模型，用户组支持配置安全预搜索，并简化了动漫分类：动漫页保留  `番剧`  和  `剧场版`，默认进入  `番剧`，不再提供 Bangumi 每日放送分类。
 
 <div align="center">
 
@@ -89,24 +89,24 @@ corepack pnpm run dev
 
 ## 环境变量
 
-| 变量 | 必填 | 说明 |
-| --- | --- | --- |
-| `USERNAME` | 是 | 站长用户名 |
-| `PASSWORD` | 是 | 站长密码，也是登录签名密钥 |
-| `NEXT_PUBLIC_STORAGE_TYPE` | 建议 | 存储方式：`localstorage`、`upstash`、`redis`、`kvrocks` |
-| `UPSTASH_URL` | Upstash 时必填 | Upstash Redis REST URL，也兼容 Vercel KV 注入的 `KV_REST_API_URL` |
-| `UPSTASH_TOKEN` | Upstash 时必填 | Upstash Redis REST Token，也兼容 Vercel KV 注入的 `KV_REST_API_TOKEN` |
-| `REDIS_URL` | Redis 时必填 | Redis 连接地址 |
-| `KVROCKS_URL` | Kvrocks 时必填 | Kvrocks 连接地址 |
-| `NEXT_PUBLIC_SITE_NAME` | 否 | 站点名称，默认 `CraterTV` |
-| `ANNOUNCEMENT` | 否 | 站点公告 |
-| `SITE_BASE` | 否 | 站点外部访问地址，用于部分播放地址重写 |
-| `NEXT_PUBLIC_SEARCH_MAX_PAGE` | 否 | 搜索接口最大拉取页数，默认 `5` |
-| `NEXT_PUBLIC_DOUBAN_PROXY_TYPE` | 否 | 豆瓣数据代理类型，默认 `cmliussss-cdn-tencent` |
-| `NEXT_PUBLIC_DOUBAN_PROXY` | 否 | 自定义豆瓣数据代理 URL |
-| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE` | 否 | 豆瓣图片代理类型，默认 `cmliussss-cdn-tencent` |
-| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY` | 否 | 自定义豆瓣图片代理 URL |
-| `NEXT_PUBLIC_FLUID_SEARCH` | 否 | 是否启用流式搜索，默认启用；设为 `false` 可关闭 |
+| 变量                                  | 必填           | 说明                                                                  |
+| ------------------------------------- | -------------- | --------------------------------------------------------------------- |
+| `USERNAME`                            | 是             | 站长用户名                                                            |
+| `PASSWORD`                            | 是             | 站长密码，也是登录签名密钥                                            |
+| `NEXT_PUBLIC_STORAGE_TYPE`            | 建议           | 存储方式：`localstorage`、`upstash`、`redis`、`kvrocks`               |
+| `UPSTASH_URL`                         | Upstash 时必填 | Upstash Redis REST URL，也兼容 Vercel KV 注入的 `KV_REST_API_URL`     |
+| `UPSTASH_TOKEN`                       | Upstash 时必填 | Upstash Redis REST Token，也兼容 Vercel KV 注入的 `KV_REST_API_TOKEN` |
+| `REDIS_URL`                           | Redis 时必填   | Redis 连接地址                                                        |
+| `KVROCKS_URL`                         | Kvrocks 时必填 | Kvrocks 连接地址                                                      |
+| `NEXT_PUBLIC_SITE_NAME`               | 否             | 站点名称，默认 `CraterTV`                                             |
+| `ANNOUNCEMENT`                        | 否             | 站点公告                                                              |
+| `SITE_BASE`                           | 否             | 站点外部访问地址，用于部分播放地址重写                                |
+| `NEXT_PUBLIC_SEARCH_MAX_PAGE`         | 否             | 搜索接口最大拉取页数，默认 `5`                                        |
+| `NEXT_PUBLIC_DOUBAN_PROXY_TYPE`       | 否             | 豆瓣数据代理类型，默认 `cmliussss-cdn-tencent`                        |
+| `NEXT_PUBLIC_DOUBAN_PROXY`            | 否             | 自定义豆瓣数据代理 URL                                                |
+| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE` | 否             | 豆瓣图片代理类型，默认 `cmliussss-cdn-tencent`                        |
+| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY`      | 否             | 自定义豆瓣图片代理 URL                                                |
+| `NEXT_PUBLIC_FLUID_SEARCH`            | 否             | 是否启用流式搜索，默认启用；设为 `false` 可关闭                       |
 
 `localstorage` 适合临时体验，不适合正式使用。该模式下用户数据和部分配置只保存在浏览器本地，无法多端同步，后台配置也不能可靠持久化。
 
