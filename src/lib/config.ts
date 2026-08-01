@@ -302,6 +302,7 @@ export async function getConfig(
 
   // 读 db
   let adminConfig: AdminConfig | null = null;
+  let shouldPersistInitialConfig = false;
   try {
     adminConfig = await db.getAdminConfig();
   } catch (e) {
@@ -314,10 +315,13 @@ export async function getConfig(
   // db 中无配置，执行一次初始化
   if (!adminConfig) {
     adminConfig = await getInitConfig('');
+    shouldPersistInitialConfig = true;
   }
   adminConfig = configSelfCheck(adminConfig);
   cachedConfig = adminConfig;
-  db.saveAdminConfig(cachedConfig);
+  if (shouldPersistInitialConfig) {
+    await db.saveAdminConfig(cachedConfig);
+  }
   return cachedConfig;
 }
 

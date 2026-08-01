@@ -58,4 +58,12 @@ describe('getConfig cache refresh', () => {
 
     expect(mockedDb.getAdminConfig).toHaveBeenCalledTimes(2);
   });
+
+  it('does not write a persisted configuration back during a read', async () => {
+    mockedDb.getAdminConfig.mockResolvedValue(createConfig('persisted'));
+
+    await getConfig({ forceRefresh: true });
+
+    expect(mockedDb.saveAdminConfig).not.toHaveBeenCalled();
+  });
 });
