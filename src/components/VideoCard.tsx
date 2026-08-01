@@ -704,7 +704,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
                 <PlayCircleIcon
                   size={50}
                   strokeWidth={0.8}
-                  className='text-white fill-transparent transition-all duration-300 ease-out hover:fill-green-500 hover:scale-[1.1]'
+                  className='text-white fill-transparent transition-all duration-300 ease-out hover:fill-theme-primary hover:scale-[1.1]'
                   style={
                     {
                       WebkitUserSelect: 'none',
@@ -825,7 +825,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
             {actualEpisodes && actualEpisodes > 1 && (
               <div
-                className='absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-md shadow-md transition-all duration-300 ease-out group-hover:scale-110'
+                className='absolute top-2 right-2 bg-theme-primary text-white text-xs font-semibold px-2 py-1 rounded-md shadow-md transition-all duration-300 ease-out group-hover:scale-110'
                 style={
                   {
                     WebkitUserSelect: 'none',
@@ -871,7 +871,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
                   }}
                 >
                   <div
-                    className='bg-green-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow-md hover:bg-green-600 hover:scale-[1.1] transition-all duration-300 ease-out'
+                    className='bg-theme-primary text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow-md hover:bg-theme-primary-hover hover:scale-[1.1] transition-all duration-300 ease-out'
                     style={
                       {
                         WebkitUserSelect: 'none',
@@ -1069,7 +1069,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
               }}
             >
               <div
-                className='h-full bg-green-500 transition-all duration-500 ease-out'
+                className='h-full bg-theme-primary transition-all duration-500 ease-out'
                 style={
                   {
                     width: `${progress}%`,
@@ -1112,7 +1112,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
               }
             >
               <span
-                className='block text-sm font-semibold truncate text-gray-900 dark:text-gray-100 transition-colors duration-300 ease-in-out group-hover:text-green-600 dark:group-hover:text-green-400 peer'
+                className='block text-sm font-semibold truncate text-gray-900 dark:text-gray-100 transition-colors duration-300 ease-in-out group-hover:text-theme-primary peer'
                 style={
                   {
                     WebkitUserSelect: 'none',
@@ -1171,7 +1171,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
                 }}
               >
                 <span
-                  className='inline-block border rounded px-2 py-0.5 border-gray-500/60 dark:border-gray-400/60 transition-all duration-300 ease-in-out group-hover:border-green-500/60 group-hover:text-green-600 dark:group-hover:text-green-400'
+                  className='inline-block border rounded px-2 py-0.5 border-gray-500/60 dark:border-gray-400/60 transition-all duration-300 ease-in-out group-hover:border-theme-primary/60 group-hover:text-theme-primary'
                   style={
                     {
                       WebkitUserSelect: 'none',

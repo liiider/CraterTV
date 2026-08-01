@@ -17,10 +17,10 @@ export function ThemeToggle() {
     if (!meta) {
       const meta = document.createElement('meta');
       meta.name = 'theme-color';
-      meta.content = theme === 'dark' ? '#0c111c' : '#f9fbfe';
+      meta.content = theme === 'dark' ? '#0b0b12' : '#f4f7f6';
       document.head.appendChild(meta);
     } else {
-      meta.setAttribute('content', theme === 'dark' ? '#0c111c' : '#f9fbfe');
+      meta.setAttribute('content', theme === 'dark' ? '#0b0b12' : '#f4f7f6');
     }
   };
 
@@ -57,7 +57,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className='w-10 h-10 p-2 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200/50 dark:text-gray-300 dark:hover:bg-gray-700/50 transition-colors'
+      className='w-10 h-10 p-2 rounded-full flex items-center justify-center text-theme-muted hover:bg-theme-primary-soft/70 hover:text-theme-primary transition-colors'
       aria-label='Toggle theme'
     >
       {resolvedTheme === 'dark' ? (
