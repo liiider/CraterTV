@@ -494,35 +494,28 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
   return toApiSites(allApiSites);
 }
 
-export async function getSafeSearchApiSite(
+export async function isSafeSearchEnabledForUser(
   user?: string
-): Promise<ApiSite | null> {
+): Promise<boolean> {
   if (!user || user === process.env.USERNAME) {
-    return null;
+    return false;
   }
 
   const config = await getConfig();
   const userConfig = config.UserConfig.Users.find((u) => u.username === user);
   if (!userConfig || userConfig.banned || !userConfig.tags?.length) {
-    return null;
+    return false;
   }
 
-  const selectedSafeApi = userConfig.tags
+  return userConfig.tags
     .map((tagName) =>
       config.UserConfig.Tags?.find((tagConfig) => tagConfig.name === tagName)
     )
-    .find(
+    .some(
       (tagConfig) =>
-        tagConfig?.safeSearchApi &&
-        tagConfig.enabledApis.includes(tagConfig.safeSearchApi)
-    )?.safeSearchApi;
-
-  if (!selectedSafeApi) {
-    return null;
-  }
-
-  const availableApiSites = await getAvailableApiSites(user);
-  return availableApiSites.find((site) => site.key === selectedSafeApi) || null;
+        tagConfig?.safeSearchEnabled === true ||
+        Boolean(tagConfig?.safeSearchApi)
+    );
 }
 
 export async function setCachedConfig(config: AdminConfig) {

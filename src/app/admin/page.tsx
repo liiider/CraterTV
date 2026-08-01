@@ -390,11 +390,12 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
   const [newUserGroup, setNewUserGroup] = useState({
     name: '',
     enabledApis: [] as string[],
-    safeSearchApi: '',
+    safeSearchEnabled: false,
   });
   const [editingUserGroup, setEditingUserGroup] = useState<{
     name: string;
     enabledApis: string[];
+    safeSearchEnabled?: boolean;
     safeSearchApi?: string;
   } | null>(null);
   const [showConfigureApisModal, setShowConfigureApisModal] = useState(false);
@@ -497,7 +498,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
     action: 'add' | 'edit' | 'delete',
     groupName: string,
     enabledApis?: string[],
-    safeSearchApi?: string
+    safeSearchEnabled?: boolean
   ) => {
     return withLoading(`userGroup_${action}_${groupName}`, async () => {
       try {
@@ -509,7 +510,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
             groupAction: action,
             groupName,
             enabledApis,
-            safeSearchApi,
+            safeSearchEnabled,
           }),
         });
 
@@ -521,7 +522,11 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
         await refreshConfig();
 
         if (action === 'add') {
-          setNewUserGroup({ name: '', enabledApis: [], safeSearchApi: '' });
+          setNewUserGroup({
+            name: '',
+            enabledApis: [],
+            safeSearchEnabled: false,
+          });
           setShowAddUserGroupForm(false);
         } else if (action === 'edit') {
           setEditingUserGroup(null);
@@ -549,7 +554,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
       'add',
       newUserGroup.name,
       newUserGroup.enabledApis,
-      newUserGroup.safeSearchApi
+      newUserGroup.safeSearchEnabled
     );
   };
 
@@ -559,7 +564,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
       'edit',
       editingUserGroup.name,
       editingUserGroup.enabledApis,
-      editingUserGroup.safeSearchApi
+      editingUserGroup.safeSearchEnabled
     );
   };
 
@@ -595,9 +600,14 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
   const handleStartEditUserGroup = (group: {
     name: string;
     enabledApis: string[];
+    safeSearchEnabled?: boolean;
     safeSearchApi?: string;
   }) => {
-    setEditingUserGroup({ ...group, safeSearchApi: group.safeSearchApi || '' });
+    setEditingUserGroup({
+      ...group,
+      safeSearchEnabled:
+        group.safeSearchEnabled === true || Boolean(group.safeSearchApi),
+    });
     setShowEditUserGroupForm(true);
     setShowAddUserGroupForm(false);
   };
@@ -1705,7 +1715,11 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
             className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
             onClick={() => {
               setShowAddUserGroupForm(false);
-              setNewUserGroup({ name: '', enabledApis: [], safeSearchApi: '' });
+              setNewUserGroup({
+                name: '',
+                enabledApis: [],
+                safeSearchEnabled: false,
+              });
             }}
           >
             <div
@@ -1723,7 +1737,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       setNewUserGroup({
                         name: '',
                         enabledApis: [],
-                        safeSearchApi: '',
+                        safeSearchEnabled: false,
                       });
                     }}
                     className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors'
@@ -1795,10 +1809,6 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                   enabledApis: prev.enabledApis.filter(
                                     (api) => api !== source.key
                                   ),
-                                  safeSearchApi:
-                                    prev.safeSearchApi === source.key
-                                      ? ''
-                                      : prev.safeSearchApi,
                                 }));
                               }
                             }}
@@ -1825,7 +1835,6 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                           setNewUserGroup((prev) => ({
                             ...prev,
                             enabledApis: [],
-                            safeSearchApi: '',
                           }))
                         }
                         className={buttonStyles.quickAction}
@@ -1850,35 +1859,28 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     </div>
                   </div>
 
-                  {/* 操作按钮 */}
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      安全预搜索源
-                    </label>
-                    <select
-                      value={newUserGroup.safeSearchApi}
-                      onChange={(e) =>
+                  <label className='flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'>
+                    <input
+                      type='checkbox'
+                      checked={newUserGroup.safeSearchEnabled}
+                      onChange={(event) =>
                         setNewUserGroup((prev) => ({
                           ...prev,
-                          safeSearchApi: e.target.value,
+                          safeSearchEnabled: event.target.checked,
                         }))
                       }
-                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    >
-                      <option value=''>不使用（按全局搜索）</option>
-                      {newUserGroup.enabledApis.map((apiKey) => {
-                        const source = config?.SourceConfig?.find(
-                          (item) => item.key === apiKey
-                        );
-                        if (!source) return null;
-                        return (
-                          <option key={source.key} value={source.key}>
-                            {source.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                      className='mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700'
+                    />
+                    <span>
+                      <span className='block text-sm font-medium text-gray-900 dark:text-gray-100'>
+                        启用影视库安全搜索
+                      </span>
+                      <span className='mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-400'>
+                        优先使用豆瓣影视库名称；豆瓣无结果时由 TMDB
+                        排除成人内容后再过滤播放源。
+                      </span>
+                    </span>
+                  </label>
 
                   <div className='flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
                     <button
@@ -1887,7 +1889,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         setNewUserGroup({
                           name: '',
                           enabledApis: [],
-                          safeSearchApi: '',
+                          safeSearchEnabled: false,
                         });
                       }}
                       className={`px-6 py-2.5 text-sm font-medium ${buttonStyles.secondary}`}
@@ -2000,10 +2002,6 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                         enabledApis: prev.enabledApis.filter(
                                           (api) => api !== source.key
                                         ),
-                                        safeSearchApi:
-                                          prev.safeSearchApi === source.key
-                                            ? ''
-                                            : prev.safeSearchApi,
                                       }
                                     : null
                                 );
@@ -2030,9 +2028,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       <button
                         onClick={() =>
                           setEditingUserGroup((prev) =>
-                            prev
-                              ? { ...prev, enabledApis: [], safeSearchApi: '' }
-                              : null
+                            prev ? { ...prev, enabledApis: [] } : null
                           )
                         }
                         className={buttonStyles.quickAction}
@@ -2056,36 +2052,32 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     </div>
                   </div>
 
-                  {/* 操作按钮 */}
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      安全预搜索源
-                    </label>
-                    <select
-                      value={editingUserGroup.safeSearchApi || ''}
-                      onChange={(e) =>
+                  <label className='flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'>
+                    <input
+                      type='checkbox'
+                      checked={editingUserGroup.safeSearchEnabled === true}
+                      onChange={(event) =>
                         setEditingUserGroup((prev) =>
                           prev
-                            ? { ...prev, safeSearchApi: e.target.value }
+                            ? {
+                                ...prev,
+                                safeSearchEnabled: event.target.checked,
+                              }
                             : null
                         )
                       }
-                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-                    >
-                      <option value=''>不使用（按全局搜索）</option>
-                      {editingUserGroup.enabledApis.map((apiKey) => {
-                        const source = config?.SourceConfig?.find(
-                          (item) => item.key === apiKey
-                        );
-                        if (!source) return null;
-                        return (
-                          <option key={source.key} value={source.key}>
-                            {source.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                      className='mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700'
+                    />
+                    <span>
+                      <span className='block text-sm font-medium text-gray-900 dark:text-gray-100'>
+                        启用影视库安全搜索
+                      </span>
+                      <span className='mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-400'>
+                        优先使用豆瓣影视库名称；豆瓣无结果时由 TMDB
+                        排除成人内容后再过滤播放源。
+                      </span>
+                    </span>
+                  </label>
 
                   <div className='flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
                     <button

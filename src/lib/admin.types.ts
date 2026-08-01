@@ -28,6 +28,8 @@ export interface AdminConfig {
     Tags?: {
       name: string;
       enabledApis: string[];
+      safeSearchEnabled?: boolean;
+      /** @deprecated Kept only to migrate older saved configurations. */
       safeSearchApi?: string;
     }[];
   };

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getSafeSearchApiSite } from '@/lib/config';
+import { getAvailableApiSites, isSafeSearchEnabledForUser } from '@/lib/config';
 import { safeSearchFromApiSites } from '@/lib/safe-search';
 
 export const runtime = 'nodejs';
@@ -29,16 +29,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const [apiSites, safeSearchSite] = await Promise.all([
+  const trustedCanonicalTitles =
+    searchParams.get('catalog') === 'douban' ? [query] : undefined;
+
+  const [apiSites, safeSearchEnabled] = await Promise.all([
     getAvailableApiSites(authInfo.username),
-    getSafeSearchApiSite(authInfo.username),
+    isSafeSearchEnabledForUser(authInfo.username),
   ]);
 
   try {
     const results = await safeSearchFromApiSites(
       apiSites,
       query,
-      safeSearchSite
+      safeSearchEnabled,
+      trustedCanonicalTitles
     );
 
     if (results.length === 0) {

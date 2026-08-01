@@ -14,6 +14,8 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { getDoubanCategories, getDoubanRecommends } from '@/lib/douban.client';
+import type { HomeRecommendationSection } from '@/lib/home-recommendations';
+import { settleRecommendations } from '@/lib/home-recommendations';
 import { DoubanItem } from '@/lib/types';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
@@ -66,42 +68,55 @@ function HomeClient() {
       try {
         setLoading(true);
 
-        // 并行获取热门电影、热门剧集和热门综艺
-        const [moviesData, tvShowsData, varietyShowsData, animeData] =
-          await Promise.all([
-            getDoubanCategories({
-              kind: 'movie',
-              category: '热门',
-              type: '全部',
-            }),
-            getDoubanCategories({ kind: 'tv', category: 'tv', type: 'tv' }),
-            getDoubanCategories({ kind: 'tv', category: 'show', type: 'show' }),
-            getDoubanRecommends({
-              kind: 'tv',
-              category: '动画',
-              format: '电视剧',
-              label: '',
-              region: '',
-              year: '',
-              platform: '',
-              sort: '',
-            }),
-          ]);
+        // 各栏目独立加载，单个豆瓣请求失败时保留其他成功结果
+        const { movies, tvShows, varietyShows, animes } =
+          await settleRecommendations(
+            {
+              movies: getDoubanCategories({
+                kind: 'movie',
+                category: '热门',
+                type: '全部',
+              }),
+              tvShows: getDoubanCategories({
+                kind: 'tv',
+                category: 'tv',
+                type: 'tv',
+              }),
+              varietyShows: getDoubanCategories({
+                kind: 'tv',
+                category: 'show',
+                type: 'show',
+              }),
+              animes: getDoubanRecommends({
+                kind: 'tv',
+                category: '动画',
+                format: '电视剧',
+                label: '',
+                region: '',
+                year: '',
+                platform: '',
+                sort: '',
+              }),
+            },
+            (section: HomeRecommendationSection, reason: unknown) => {
+              console.error(`获取首页推荐栏目失败: ${section}`, reason);
+            }
+          );
 
-        if (moviesData.code === 200) {
-          setHotMovies(moviesData.list);
+        if (movies?.code === 200) {
+          setHotMovies(movies.list);
         }
 
-        if (tvShowsData.code === 200) {
-          setHotTvShows(tvShowsData.list);
+        if (tvShows?.code === 200) {
+          setHotTvShows(tvShows.list);
         }
 
-        if (varietyShowsData.code === 200) {
-          setHotVarietyShows(varietyShowsData.list);
+        if (varietyShows?.code === 200) {
+          setHotVarietyShows(varietyShows.list);
         }
 
-        if (animeData.code === 200) {
-          setHotAnimes(animeData.list);
+        if (animes?.code === 200) {
+          setHotAnimes(animes.list);
         }
       } catch (error) {
         console.error('获取推荐数据失败:', error);

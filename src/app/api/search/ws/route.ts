@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getSafeSearchApiSite } from '@/lib/config';
+import { getAvailableApiSites, isSafeSearchEnabledForUser } from '@/lib/config';
 import {
   getCanonicalSearchTitles,
   searchExactTitlesFromSite,
@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const [apiSites, safeSearchSite] = await Promise.all([
+  const [apiSites, safeSearchEnabled] = await Promise.all([
     getAvailableApiSites(authInfo.username),
-    getSafeSearchApiSite(authInfo.username),
+    isSafeSearchEnabledForUser(authInfo.username),
   ]);
   let streamClosed = false;
 
@@ -83,18 +83,12 @@ export async function GET(request: NextRequest) {
       }
 
       let canonicalTitles: string[] | null = null;
-      if (safeSearchSite) {
+      if (safeSearchEnabled) {
         canonicalTitles = [];
         try {
-          canonicalTitles = await getCanonicalSearchTitles(
-            safeSearchSite,
-            query
-          );
+          canonicalTitles = await getCanonicalSearchTitles(query);
         } catch (error) {
-          console.warn(
-            `Canonical search failed ${safeSearchSite.name}:`,
-            error
-          );
+          console.warn('TMDB canonical search failed:', error);
         }
 
         if (canonicalTitles.length === 0) {
