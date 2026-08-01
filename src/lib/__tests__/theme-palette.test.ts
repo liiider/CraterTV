@@ -19,7 +19,7 @@ describe('site theme palettes', () => {
     expect(css).toMatch(/html\.dark\s*{[\s\S]*--theme-accent: 245 158 11;/);
   });
 
-  it('does not use the legacy green or blue palette for interactions', () => {
+  it('does not use the legacy green, blue, or purple palette for interactions', () => {
     const interactiveFiles = [
       'src/app/admin/page.tsx',
       'src/app/search/page.tsx',
@@ -38,10 +38,20 @@ describe('site theme palettes', () => {
       .join('\n');
 
     expect(interactiveSource).not.toMatch(
-      /(?:focus:ring|focus:border|hover:text|peer-checked:bg)-(?:green|blue)-/
+      /(?:focus:ring|focus:border|hover:text|peer-checked:bg)-(?:green|blue|purple)-/
     );
     expect(interactiveSource).not.toMatch(
       /bg-(?:green|blue)-600 hover:bg-(?:green|blue)-700/
+    );
+    const roleInteractionSource = [
+      'src/app/admin/page.tsx',
+      'src/components/UserMenu.tsx',
+    ]
+      .map((file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8'))
+      .join('\n');
+
+    expect(roleInteractionSource).not.toMatch(
+      /(?:bg|text|border)-(?:purple|violet|indigo|fuchsia)-/
     );
   });
 });

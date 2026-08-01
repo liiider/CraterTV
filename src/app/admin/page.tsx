@@ -81,9 +81,9 @@ const buttonStyles = {
     'px-2 py-1 text-xs font-medium bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-600 dark:hover:bg-yellow-700 text-white rounded-md transition-colors',
   // 圆角小按钮（用于表格操作）
   roundedPrimary:
-    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 dark:text-blue-200 transition-colors',
+    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-theme-primary-soft text-theme-primary hover:bg-theme-primary-soft/80 border border-theme-primary/20 transition-colors',
   roundedSuccess:
-    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:hover:bg-green-900/60 dark:text-green-200 transition-colors',
+    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-theme-primary-soft text-theme-primary hover:bg-theme-primary-soft/80 border border-theme-primary/20 transition-colors',
   roundedDanger:
     'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-200 transition-colors',
   roundedSecondary:
@@ -91,7 +91,7 @@ const buttonStyles = {
   roundedWarning:
     'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/40 dark:hover:bg-yellow-900/60 dark:text-yellow-200 transition-colors',
   roundedPurple:
-    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-900/60 dark:text-purple-200 transition-colors',
+    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-theme-primary-soft text-theme-primary hover:bg-theme-primary-soft/80 border border-theme-primary/20 transition-colors',
   // 禁用状态
   disabled:
     'px-3 py-1.5 text-sm font-medium bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white rounded-lg transition-colors',
@@ -1355,7 +1355,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                               user.role === 'owner'
                                 ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
                                 : user.role === 'admin'
-                                ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300'
+                                ? 'bg-theme-primary-soft/70 text-theme-primary'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                             }`}
                           >
@@ -2007,7 +2007,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                 );
                               }
                             }}
-                            className='rounded border-gray-300 text-purple-600 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700'
+                            className='rounded border-gray-300 text-theme-primary focus:ring-theme-primary dark:border-gray-600 dark:bg-gray-700'
                           />
                           <div className='flex-1 min-w-0'>
                             <div className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
@@ -2066,7 +2066,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                             : null
                         )
                       }
-                      className='mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700'
+                      className='mt-0.5 rounded border-gray-300 text-theme-primary focus:ring-theme-primary dark:border-gray-600 dark:bg-gray-700'
                     />
                     <span>
                       <span className='block text-sm font-medium text-gray-900 dark:text-gray-100'>
@@ -3764,7 +3764,7 @@ const CategoryConfig = ({
             className={`px-2 py-1 text-xs rounded-full ${
               category.type === 'movie'
                 ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
-                : 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300'
+                : 'bg-theme-primary-soft/70 text-theme-primary'
             }`}
           >
             {category.type === 'movie' ? '电影' : '电视剧'}
