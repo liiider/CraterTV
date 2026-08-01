@@ -417,12 +417,13 @@ export async function POST(request: NextRequest) {
       }
       case 'userGroup': {
         // 用户组管理操作
-        const { groupAction, groupName, enabledApis, safeSearchApi } = body as {
-          groupAction: 'add' | 'edit' | 'delete';
-          groupName: string;
-          enabledApis?: string[];
-          safeSearchApi?: string;
-        };
+        const { groupAction, groupName, enabledApis, safeSearchEnabled } =
+          body as {
+            groupAction: 'add' | 'edit' | 'delete';
+            groupName: string;
+            enabledApis?: string[];
+            safeSearchEnabled?: boolean;
+          };
 
         if (!adminConfig.UserConfig.Tags) {
           adminConfig.UserConfig.Tags = [];
@@ -433,11 +434,7 @@ export async function POST(request: NextRequest) {
           enabledApis,
           sourceKeys
         );
-        const normalizedSafeSearchApi =
-          typeof safeSearchApi === 'string' &&
-          normalizedEnabledApis.includes(safeSearchApi)
-            ? safeSearchApi
-            : undefined;
+        const normalizedSafeSearchEnabled = safeSearchEnabled === true;
 
         switch (groupAction) {
           case 'add': {
@@ -451,9 +448,7 @@ export async function POST(request: NextRequest) {
             adminConfig.UserConfig.Tags.push({
               name: groupName,
               enabledApis: normalizedEnabledApis,
-              ...(normalizedSafeSearchApi
-                ? { safeSearchApi: normalizedSafeSearchApi }
-                : {}),
+              safeSearchEnabled: normalizedSafeSearchEnabled,
             });
             break;
           }
@@ -469,12 +464,9 @@ export async function POST(request: NextRequest) {
             }
             adminConfig.UserConfig.Tags[groupIndex].enabledApis =
               normalizedEnabledApis;
-            if (normalizedSafeSearchApi) {
-              adminConfig.UserConfig.Tags[groupIndex].safeSearchApi =
-                normalizedSafeSearchApi;
-            } else {
-              delete adminConfig.UserConfig.Tags[groupIndex].safeSearchApi;
-            }
+            adminConfig.UserConfig.Tags[groupIndex].safeSearchEnabled =
+              normalizedSafeSearchEnabled;
+            delete adminConfig.UserConfig.Tags[groupIndex].safeSearchApi;
             adminConfig.UserConfig.Users.filter((user) =>
               user.tags?.includes(groupName)
             ).forEach((user) =>

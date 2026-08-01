@@ -1,8 +1,9 @@
 import { ApiSite } from '@/lib/config';
+import { searchCanonicalTitlesFromDouban } from '@/lib/douban-search';
 import { searchFromApi } from '@/lib/downstream';
+import { searchCanonicalTitlesFromTmdb } from '@/lib/tmdb-search';
 import { SearchResult } from '@/lib/types';
 
-const MAX_CANONICAL_TITLES = 8;
 const SEARCH_TIMEOUT_MS = 20000;
 
 export function normalizeSearchTitle(title: string) {
@@ -10,24 +11,6 @@ export function normalizeSearchTitle(title: string) {
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[《》「」『』【】()[\]（）_:：,，.。!！?？-]/g, '');
-}
-
-function uniqueTitles(results: SearchResult[]) {
-  const seen = new Set<string>();
-  const titles: string[] = [];
-
-  results.forEach((result) => {
-    const title = result.title?.trim();
-    if (!title) return;
-
-    const normalized = normalizeSearchTitle(title);
-    if (!normalized || seen.has(normalized)) return;
-
-    seen.add(normalized);
-    titles.push(title);
-  });
-
-  return titles.slice(0, MAX_CANONICAL_TITLES);
 }
 
 function dedupeResults(results: SearchResult[]) {
@@ -55,12 +38,11 @@ export async function searchFromApiSiteWithTimeout(
   ]);
 }
 
-export async function getCanonicalSearchTitles(
-  safeSite: ApiSite,
-  query: string
-) {
-  const preSearchResults = await searchFromApiSiteWithTimeout(safeSite, query);
-  return uniqueTitles(preSearchResults);
+export async function getCanonicalSearchTitles(query: string) {
+  const doubanTitles = await searchCanonicalTitlesFromDouban(query);
+  if (doubanTitles.length > 0) return doubanTitles;
+
+  return searchCanonicalTitlesFromTmdb(query);
 }
 
 export async function searchExactTitlesFromSite(
@@ -83,23 +65,23 @@ export async function searchExactTitlesFromSite(
 export async function safeSearchFromApiSites(
   apiSites: ApiSite[],
   query: string,
-  safeSite?: ApiSite | null
+  safeSearchEnabled = false,
+  trustedCanonicalTitles?: string[]
 ) {
-  if (apiSites.length === 0) {
-    return [];
-  }
+  if (apiSites.length === 0) return [];
 
-  if (!safeSite) {
+  if (!safeSearchEnabled) {
     const results = await Promise.all(
       apiSites.map((site) => searchFromApiSiteWithTimeout(site, query))
     );
     return dedupeResults(results.flat());
   }
 
-  const canonicalTitles = await getCanonicalSearchTitles(safeSite, query);
-  if (canonicalTitles.length === 0) {
-    return [];
-  }
+  const canonicalTitles =
+    trustedCanonicalTitles && trustedCanonicalTitles.length > 0
+      ? trustedCanonicalTitles
+      : await getCanonicalSearchTitles(query);
+  if (canonicalTitles.length === 0) return [];
 
   const results = await Promise.all(
     apiSites.map((site) => searchExactTitlesFromSite(site, canonicalTitles))

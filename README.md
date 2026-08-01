@@ -24,6 +24,7 @@ CraterTV 是一个基于 Next.js 的影视聚合与播放管理工具。项目�
 - 后台管理站点配置、采集源、直播源、自定义分类、用户和用户组。
 - 三层权限：站长、管理员、用户。
 - 用户组作为采集源权限上限，用户个人采集源只能在用户组允许范围内选择。
+- 用户组可启用影视库安全搜索：手动搜索优先使用豆瓣影视库，豆瓣无结果时由 TMDB 过滤成人内容。
 - 豆瓣电影、电视剧、综艺、动漫推荐；动漫仅保留番剧和剧场版。
 - PWA 支持，移动端和桌面端自适应。
 
@@ -62,13 +63,28 @@ CraterTV 是一个基于 Next.js 的影视聚合与播放管理工具。项目�
 
 ### Vercel
 
-1. Fork 本仓库。
-2. 在 Vercel 中导入仓库。
-3. 配置环境变量。
-4. 部署完成后，用 `USERNAME` 和 `PASSWORD` 登录站长后台。
-5. 在后台导入或填写采集源配置。
+1. Fork 本仓库，或将本仓库推送到自己的 GitHub 账号。
+2. 登录 [Vercel](https://vercel.com/)，选择 **Add New → Project** 并导入仓库。
+3. Framework Preset 保持 **Next.js**，其余构建设置使用默认值。
+4. 至少配置 `USERNAME`、`PASSWORD` 和存储服务相关环境变量；需要 TMDB 兜底时再配置 `TMDB_API_READ_TOKEN`。
+5. 点击 **Deploy**。部署完成后，用 `USERNAME` 和 `PASSWORD` 登录站长后台。
+6. 在后台导入或填写采集源，并按需建立用户组、启用影视库安全搜索。
 
 推荐在 Vercel 上使用 Upstash Redis 存储，以保留后台配置、用户、收藏和播放记录。
+
+推荐的 Vercel 环境变量组合：
+
+```env
+USERNAME=你的站长用户名
+PASSWORD=高强度随机密码
+NEXT_PUBLIC_STORAGE_TYPE=upstash
+UPSTASH_URL=你的 Upstash REST URL
+UPSTASH_TOKEN=你的 Upstash REST Token
+TMDB_API_READ_TOKEN=你的 TMDB API Read Access Token
+NEXT_PUBLIC_SITE_NAME=CraterTV
+```
+
+所有变量建议同时应用到 Production、Preview 和 Development。修改服务端环境变量后需要重新部署才会生效。不要为密码、Redis Token 或 TMDB Token 添加 `NEXT_PUBLIC_` 前缀。
 
 ### Node.js
 
@@ -102,6 +118,7 @@ corepack pnpm run dev
 | `ANNOUNCEMENT`                        | 否             | 站点公告                                                              |
 | `SITE_BASE`                           | 否             | 站点外部访问地址，用于部分播放地址重写                                |
 | `NEXT_PUBLIC_SEARCH_MAX_PAGE`         | 否             | 搜索接口最大拉取页数，默认 `5`                                        |
+| `TMDB_API_READ_TOKEN`                 | 安全搜索建议   | TMDB API 读访问令牌，豆瓣无结果时用于规范片名和过滤成人内容           |
 | `NEXT_PUBLIC_DOUBAN_PROXY_TYPE`       | 否             | 豆瓣数据代理类型，默认 `cmliussss-cdn-tencent`                        |
 | `NEXT_PUBLIC_DOUBAN_PROXY`            | 否             | 自定义豆瓣数据代理 URL                                                |
 | `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE` | 否             | 豆瓣图片代理类型，默认 `cmliussss-cdn-tencent`                        |
@@ -109,6 +126,31 @@ corepack pnpm run dev
 | `NEXT_PUBLIC_FLUID_SEARCH`            | 否             | 是否启用流式搜索，默认启用；设为 `false` 可关闭                       |
 
 `localstorage` 适合临时体验，不适合正式使用。该模式下用户数据和部分配置只保存在浏览器本地，无法多端同步，后台配置也不能可靠持久化。
+
+TMDB 令牌应写入部署平台的服务端环境变量或本地 `.env.local`，不要使用
+`NEXT_PUBLIC_` 前缀，也不要提交到版本库。为用户组启用影视库安全搜索后，系统先从
+豆瓣影视库获取规范名称；豆瓣没有影视结果时，再由 TMDB 排除成人内容并提供规范
+名称，最后到该组允许的播放源中做精确匹配。两个影视库都不可用或都没有结果时
+返回空结果。
+
+首页豆瓣推荐会标记为豆瓣目录来源：播放时直接使用卡片标题匹配播放源，不再查询
+豆瓣或 TMDB。该简化方式适用于私有站点；公开部署时应改为不可伪造的来源凭证。
+
+## 安全搜索策略
+
+安全搜索按用户组启用，不影响站长账号：
+
+```text
+首页豆瓣推荐 → 直接使用卡片标题 → 精确匹配播放源
+
+用户手动搜索 → 豆瓣影视库有结果 → 使用豆瓣规范标题 → 精确匹配播放源
+             └→ 豆瓣无结果 → TMDB 排除成人内容 → 精确匹配播放源
+```
+
+- “影视库搜索”是模糊搜索，用于找到规范片名。
+- 播放源结果只保留规范化后标题完全一致的条目。
+- 标题规范化会忽略大小写、空格和常见中英文标点。
+- 豆瓣和 TMDB 都没有结果时，受保护用户组返回空结果，不退化为普通全源搜索。
 
 ## 采集源配置
 
