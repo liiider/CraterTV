@@ -14,7 +14,31 @@
 }
 
 :root {
-  --foreground-rgb: 255, 255, 255;
+  color-scheme: light;
+  --theme-background: 244 247 246;
+  --theme-surface: 255 255 255;
+  --theme-elevated: 237 243 241;
+  --theme-border: 216 226 223;
+  --theme-foreground: 20 32 29;
+  --theme-muted: 82 99 94;
+  --theme-primary: 15 143 120;
+  --theme-primary-hover: 11 116 98;
+  --theme-primary-soft: 216 243 237;
+  --theme-accent: 242 184 75;
+}
+
+html.dark {
+  color-scheme: dark;
+  --theme-background: 11 11 18;
+  --theme-surface: 23 20 29;
+  --theme-elevated: 33 28 39;
+  --theme-border: 52 44 57;
+  --theme-foreground: 250 247 248;
+  --theme-muted: 185 175 186;
+  --theme-primary: 225 29 72;
+  --theme-primary-hover: 190 18 60;
+  --theme-primary-soft: 76 16 34;
+  --theme-accent: 245 158 11;
 }
 
 html,
@@ -26,19 +50,29 @@ body {
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: rgb(var(--theme-foreground));
+  background: rgb(var(--theme-background));
+  transition: color 200ms ease, background-color 200ms ease;
 }
 
 html:not(.dark) body {
   background: linear-gradient(
     180deg,
-    #e6f3fb 0%,
-    #eaf3f7 18%,
-    #f7f7f3 38%,
-    #e9ecef 60%,
-    #dbe3ea 80%,
-    #d3dde6 100%
+    #edf7f4 0%,
+    #f4f7f6 32%,
+    #eef4f2 68%,
+    #e5eeeb 100%
   );
+  background-attachment: fixed;
+}
+
+html.dark body {
+  background: radial-gradient(
+      circle at 82% 4%,
+      rgb(76 16 34 / 0.34),
+      transparent 30rem
+    ),
+    linear-gradient(180deg, #0b0b12 0%, #100d15 55%, #0b0b12 100%);
   background-attachment: fixed;
 }
 

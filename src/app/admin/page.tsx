@@ -51,10 +51,10 @@ import PageLayout from '@/components/PageLayout';
 const buttonStyles = {
   // 主要操作按钮（蓝色）- 用于配置、设置、确认等
   primary:
-    'px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-colors',
+    'px-3 py-1.5 text-sm font-medium bg-theme-primary hover:bg-theme-primary-hover text-white rounded-lg transition-colors',
   // 成功操作按钮（绿色）- 用于添加、启用、保存等
   success:
-    'px-3 py-1.5 text-sm font-medium bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-lg transition-colors',
+    'px-3 py-1.5 text-sm font-medium bg-theme-primary hover:bg-theme-primary-hover text-white rounded-lg transition-colors',
   // 危险操作按钮（红色）- 用于删除、禁用、重置等
   danger:
     'px-3 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg transition-colors',
@@ -66,10 +66,10 @@ const buttonStyles = {
     'px-3 py-1.5 text-sm font-medium bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-600 dark:hover:bg-yellow-700 text-white rounded-lg transition-colors',
   // 小尺寸主要按钮
   primarySmall:
-    'px-2 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md transition-colors',
+    'px-2 py-1 text-xs font-medium bg-theme-primary hover:bg-theme-primary-hover text-white rounded-md transition-colors',
   // 小尺寸成功按钮
   successSmall:
-    'px-2 py-1 text-xs font-medium bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-md transition-colors',
+    'px-2 py-1 text-xs font-medium bg-theme-primary hover:bg-theme-primary-hover text-white rounded-md transition-colors',
   // 小尺寸危险按钮
   dangerSmall:
     'px-2 py-1 text-xs font-medium bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-md transition-colors',
@@ -98,7 +98,7 @@ const buttonStyles = {
   disabledSmall:
     'px-2 py-1 text-xs font-medium bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white rounded-md transition-colors',
   // 开关按钮样式
-  toggleOn: 'bg-green-600 dark:bg-green-600',
+  toggleOn: 'bg-theme-primary',
   toggleOff: 'bg-gray-200 dark:bg-gray-700',
   toggleThumb: 'bg-white',
   toggleThumbOn: 'translate-x-6',
@@ -1096,7 +1096,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       username: e.target.value,
                     }))
                   }
-                  className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+                  className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
                 />
                 <input
                   type='password'
@@ -1108,7 +1108,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       password: e.target.value,
                     }))
                   }
-                  className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+                  className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
                 />
               </div>
               <div>
@@ -1123,7 +1123,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       userGroup: e.target.value,
                     }))
                   }
-                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
                 >
                   <option value=''>无用户组（无限制）</option>
                   {userGroups.map((group) => (
@@ -1184,7 +1184,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     password: e.target.value,
                   }))
                 }
-                className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
               />
               <button
                 onClick={handleChangePassword}
@@ -1241,7 +1241,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         type='checkbox'
                         checked={selectAllUsers}
                         onChange={(e) => handleSelectAllUsers(e.target.checked)}
-                        className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+                        className='w-4 h-4 text-theme-primary bg-gray-100 border-gray-300 rounded focus:ring-theme-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
                       />
                     ) : (
                       <div className='w-4 h-4' />
@@ -1340,7 +1340,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                   e.target.checked
                                 )
                               }
-                              className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+                              className='w-4 h-4 text-theme-primary bg-gray-100 border-gray-300 rounded focus:ring-theme-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
                             />
                           ) : (
                             <div className='w-4 h-4' />
@@ -1620,7 +1620,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                               );
                             }
                           }}
-                          className='rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700'
+                          className='rounded border-gray-300 text-theme-primary focus:ring-theme-primary dark:border-gray-600 dark:bg-gray-700'
                         />
                         <div className='flex-1 min-w-0'>
                           <div className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
@@ -1774,7 +1774,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                           name: e.target.value,
                         }))
                       }
-                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
                     />
                   </div>
 
@@ -1812,7 +1812,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                 }));
                               }
                             }}
-                            className='rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700'
+                            className='rounded border-gray-300 text-theme-primary focus:ring-theme-primary dark:border-gray-600 dark:bg-gray-700'
                           />
                           <div className='flex-1 min-w-0'>
                             <div className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
@@ -1869,7 +1869,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                           safeSearchEnabled: event.target.checked,
                         }))
                       }
-                      className='mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700'
+                      className='mt-0.5 rounded border-gray-300 text-theme-primary focus:ring-theme-primary dark:border-gray-600 dark:bg-gray-700'
                     />
                     <span>
                       <span className='block text-sm font-medium text-gray-900 dark:text-gray-100'>
@@ -2196,7 +2196,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       const value = e.target.value;
                       setSelectedUserGroups(value ? [value] : []);
                     }}
-                    className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors'
+                    className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent transition-colors'
                   >
                     <option value=''>无用户组（无限制）</option>
                     {userGroups.map((group) => (
@@ -2580,7 +2580,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     </label>
                     <select
                       onChange={(e) => setSelectedUserGroup(e.target.value)}
-                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors'
+                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent transition-colors'
                       value={selectedUserGroup}
                     >
                       <option value=''>无用户组（无限制）</option>
@@ -3025,7 +3025,7 @@ const VideoSourceConfig = ({
             type='checkbox'
             checked={selectedSources.has(source.key)}
             onChange={(e) => handleSelectSource(source.key, e.target.checked)}
-            className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+            className='w-4 h-4 text-theme-primary bg-gray-100 border-gray-300 rounded focus:ring-theme-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
           />
         </td>
         <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
@@ -3390,7 +3390,7 @@ const VideoSourceConfig = ({
                   type='checkbox'
                   checked={selectAll}
                   onChange={(e) => handleSelectAll(e.target.checked)}
-                  className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+                  className='w-4 h-4 text-theme-primary bg-gray-100 border-gray-300 rounded focus:ring-theme-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
                 />
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
@@ -4113,7 +4113,7 @@ const ConfigFileComponent = ({
               onChange={(e) => setSubscriptionUrl(e.target.value)}
               placeholder='https://example.com/config.json'
               disabled={false}
-              className='w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
+              className='w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent transition-all duration-200 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
             />
             <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
               输入配置文件的订阅地址，要求 JSON 格式，且使用 Base58 编码
@@ -4156,7 +4156,7 @@ const ConfigFileComponent = ({
               type='button'
               onClick={() => setAutoUpdate(!autoUpdate)}
               disabled={false}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-theme-primary focus:ring-offset-2 ${
                 autoUpdate ? buttonStyles.toggleOn : buttonStyles.toggleOff
               }`}
             >
@@ -4183,7 +4183,7 @@ const ConfigFileComponent = ({
             rows={20}
             placeholder='请输入配置文件内容（JSON 格式）...'
             disabled={false}
-            className='w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm leading-relaxed resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500'
+            className='w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm leading-relaxed resize-none focus:ring-2 focus:ring-theme-primary focus:border-transparent transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500'
             style={{
               fontFamily:
                 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
@@ -4410,7 +4410,7 @@ const SiteConfigComponent = ({
           onChange={(e) =>
             setSiteSettings((prev) => ({ ...prev, SiteName: e.target.value }))
           }
-          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
         />
       </div>
 
@@ -4428,7 +4428,7 @@ const SiteConfigComponent = ({
             }))
           }
           rows={3}
-          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
         />
       </div>
 
@@ -4443,7 +4443,7 @@ const SiteConfigComponent = ({
             <button
               type='button'
               onClick={() => setIsDoubanDropdownOpen(!isDoubanDropdownOpen)}
-              className='w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 text-left'
+              className='w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-theme-primary transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 text-left'
             >
               {
                 doubanDataSourceOptions.find(
@@ -4474,13 +4474,13 @@ const SiteConfigComponent = ({
                     }}
                     className={`w-full px-3 py-2.5 text-left text-sm transition-colors duration-150 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 ${
                       siteSettings.DoubanProxyType === option.value
-                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                        ? 'bg-theme-primary-soft/70 text-theme-primary'
                         : 'text-gray-900 dark:text-gray-100'
                     }`}
                   >
                     <span className='truncate'>{option.label}</span>
                     {siteSettings.DoubanProxyType === option.value && (
-                      <Check className='w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2' />
+                      <Check className='w-4 h-4 text-theme-primary flex-shrink-0 ml-2' />
                     )}
                   </button>
                 ))}
@@ -4529,7 +4529,7 @@ const SiteConfigComponent = ({
                   DoubanProxy: e.target.value,
                 }))
               }
-              className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
+              className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-theme-primary transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
             />
             <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
               自定义代理服务器地址
@@ -4553,7 +4553,7 @@ const SiteConfigComponent = ({
                   !isDoubanImageProxyDropdownOpen
                 )
               }
-              className='w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 text-left'
+              className='w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-theme-primary transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 text-left'
             >
               {
                 doubanImageProxyTypeOptions.find(
@@ -4584,13 +4584,13 @@ const SiteConfigComponent = ({
                     }}
                     className={`w-full px-3 py-2.5 text-left text-sm transition-colors duration-150 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 ${
                       siteSettings.DoubanImageProxyType === option.value
-                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                        ? 'bg-theme-primary-soft/70 text-theme-primary'
                         : 'text-gray-900 dark:text-gray-100'
                     }`}
                   >
                     <span className='truncate'>{option.label}</span>
                     {siteSettings.DoubanImageProxyType === option.value && (
-                      <Check className='w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2' />
+                      <Check className='w-4 h-4 text-theme-primary flex-shrink-0 ml-2' />
                     )}
                   </button>
                 ))}
@@ -4639,7 +4639,7 @@ const SiteConfigComponent = ({
                   DoubanImageProxy: e.target.value,
                 }))
               }
-              className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
+              className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-theme-primary transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
             />
             <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
               自定义图片代理服务器地址
@@ -4663,7 +4663,7 @@ const SiteConfigComponent = ({
               SearchDownstreamMaxPage: Number(e.target.value),
             }))
           }
-          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
         />
       </div>
 
@@ -4682,7 +4682,7 @@ const SiteConfigComponent = ({
               SiteInterfaceCacheTime: Number(e.target.value),
             }))
           }
-          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-theme-primary focus:border-transparent'
         />
       </div>
 
@@ -4700,7 +4700,7 @@ const SiteConfigComponent = ({
                 FluidSearch: !prev.FluidSearch,
               }))
             }
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-theme-primary focus:ring-offset-2 ${
               siteSettings.FluidSearch
                 ? buttonStyles.toggleOn
                 : buttonStyles.toggleOff
@@ -4736,7 +4736,7 @@ const SiteConfigComponent = ({
                 EnableWebLive: !prev.EnableWebLive,
               }))
             }
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-theme-primary focus:ring-offset-2 ${
               siteSettings.EnableWebLive
                 ? buttonStyles.toggleOn
                 : buttonStyles.toggleOff
@@ -5115,7 +5115,7 @@ const LiveSourceConfig = ({
             className={`px-3 py-1.5 text-sm font-medium flex items-center space-x-2 ${
               isRefreshing || isLoading('refreshLiveSources')
                 ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white rounded-lg'
-                : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-colors'
+                : 'bg-theme-primary hover:bg-theme-primary-hover text-white rounded-lg transition-colors'
             }`}
           >
             <span>

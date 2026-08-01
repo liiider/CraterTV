@@ -292,27 +292,36 @@ async function getInitConfig(
   return adminConfig;
 }
 
-export async function getConfig(): Promise<AdminConfig> {
+export async function getConfig(
+  options: { forceRefresh?: boolean } = {}
+): Promise<AdminConfig> {
   // 直接使用内存缓存
-  if (cachedConfig) {
+  if (cachedConfig && !options.forceRefresh) {
     return cachedConfig;
   }
 
   // 读 db
   let adminConfig: AdminConfig | null = null;
+  let shouldPersistInitialConfig = false;
   try {
     adminConfig = await db.getAdminConfig();
   } catch (e) {
     console.error('获取管理员配置失败:', e);
+    if (cachedConfig) {
+      return cachedConfig;
+    }
   }
 
   // db 中无配置，执行一次初始化
   if (!adminConfig) {
     adminConfig = await getInitConfig('');
+    shouldPersistInitialConfig = true;
   }
   adminConfig = configSelfCheck(adminConfig);
   cachedConfig = adminConfig;
-  db.saveAdminConfig(cachedConfig);
+  if (shouldPersistInitialConfig) {
+    await db.saveAdminConfig(cachedConfig);
+  }
   return cachedConfig;
 }
 
