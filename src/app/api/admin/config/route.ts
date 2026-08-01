@@ -9,7 +9,6 @@ import { getConfig } from '@/lib/config';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-
 export async function GET(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
   if (storageType === 'localstorage') {
@@ -28,7 +27,9 @@ export async function GET(request: NextRequest) {
   const username = authInfo.username;
 
   try {
-    const config = await getConfig();
+    // 管理页保存后的读取必须绕过进程内缓存。Vercel 的读写请求可能
+    // 落在不同实例上，否则刷新会读到另一个实例中的旧配置。
+    const config = await getConfig({ forceRefresh: true });
     const result: AdminConfigResult = {
       Role: 'owner',
       Config: config,

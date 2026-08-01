@@ -292,9 +292,11 @@ async function getInitConfig(
   return adminConfig;
 }
 
-export async function getConfig(): Promise<AdminConfig> {
+export async function getConfig(
+  options: { forceRefresh?: boolean } = {}
+): Promise<AdminConfig> {
   // 直接使用内存缓存
-  if (cachedConfig) {
+  if (cachedConfig && !options.forceRefresh) {
     return cachedConfig;
   }
 
@@ -304,6 +306,9 @@ export async function getConfig(): Promise<AdminConfig> {
     adminConfig = await db.getAdminConfig();
   } catch (e) {
     console.error('获取管理员配置失败:', e);
+    if (cachedConfig) {
+      return cachedConfig;
+    }
   }
 
   // db 中无配置，执行一次初始化

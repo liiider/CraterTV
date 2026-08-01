@@ -135,7 +135,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取配置与存储
-    const adminConfig = await getConfig();
+    // 修改前读取持久化存储中的最新值，避免旧实例用缓存覆盖
+    // 其他实例刚保存的用户组配置。
+    const adminConfig = await getConfig({ forceRefresh: true });
 
     // 判定操作者角色
     let operatorRole: 'owner' | 'admin';
