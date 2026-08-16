@@ -19,6 +19,10 @@ import {
   getSearchHistory,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+import {
+  type PlaybackHandoffSelection,
+  createPlaybackHandoff,
+} from '@/lib/playback-handoff';
 import { SearchResult } from '@/lib/types';
 
 import PageLayout from '@/components/PageLayout';
@@ -28,6 +32,16 @@ import SearchResultFilter, {
 import SearchSuggestions from '@/components/SearchSuggestions';
 import VideoCard, { VideoCardHandle } from '@/components/VideoCard';
 import VirtualGrid from '@/components/VirtualGrid';
+
+const getGroupKey = (title: string, year: string, type: string) =>
+  `${title.replaceAll(' ', '')}-${year || 'unknown'}-${type}`;
+
+const getResultGroupKey = (item: SearchResult) =>
+  getGroupKey(
+    item.title,
+    item.year,
+    item.episodes.length === 1 ? 'movie' : 'tv'
+  );
 
 function SearchPageClient() {
   // 搜索历史
@@ -200,9 +214,7 @@ function SearchPageClient() {
 
     searchResults.forEach((item) => {
       // 使用 title + year + type 作为键，year 必然存在，但依然兜底 'unknown'
-      const key = `${item.title.replaceAll(' ', '')}-${
-        item.year || 'unknown'
-      }-${item.episodes.length === 1 ? 'movie' : 'tv'}`;
+      const key = getResultGroupKey(item);
       const arr = map.get(key) || [];
 
       // 如果是新的键，记录其顺序
@@ -219,6 +231,41 @@ function SearchPageClient() {
       (key) => [key, map.get(key)!] as [string, SearchResult[]]
     );
   }, [searchResults]);
+
+  const searchComplete =
+    !isLoading && totalSources > 0 && completedSources >= totalSources;
+  const searchResultsRef = useRef(searchResults);
+  const searchCompleteRef = useRef(searchComplete);
+  searchResultsRef.current = searchResults;
+  searchCompleteRef.current = searchComplete;
+
+  const preparePlaybackHandoff = React.useCallback(
+    (selection: PlaybackHandoffSelection) => {
+      const selectedGroupKey = getGroupKey(
+        selection.title,
+        selection.year,
+        selection.type
+      );
+      const sources = searchResultsRef.current.filter(
+        (item) => getResultGroupKey(item) === selectedGroupKey
+      );
+
+      if (sources.length === 0) return '';
+
+      return createPlaybackHandoff({
+        query: selection.query,
+        title: selection.title,
+        year: selection.year,
+        type: selection.type,
+        catalog: selection.catalog,
+        clickedSource: selection.source,
+        clickedId: selection.id,
+        sources,
+        searchComplete: searchCompleteRef.current,
+      });
+    },
+    []
+  );
 
   // 当聚合结果变化时，如果某个聚合已存在，则调用其卡片 ref 的 set 方法增量更新
   useEffect(() => {
@@ -552,9 +599,12 @@ function SearchPageClient() {
                   }
                   startTransition(() => {
                     setSearchResults((prev) => prev.concat(toAppend));
+                    // 与最后一批结果一起提交，避免把不完整快照标记为完成。
+                    setIsLoading(false);
                   });
+                } else {
+                  setIsLoading(false);
                 }
-                setIsLoading(false);
                 try {
                   es.close();
                 } catch {}
@@ -867,6 +917,7 @@ function SearchPageClient() {
                                   : ''
                               }
                               type={type}
+                              preparePlaybackHandoff={preparePlaybackHandoff}
                             />
                           </div>
                         );
@@ -899,6 +950,7 @@ function SearchPageClient() {
                             year={item.year}
                             from='search'
                             type={item.episodes.length > 1 ? 'tv' : 'movie'}
+                            preparePlaybackHandoff={preparePlaybackHandoff}
                           />
                         </div>
                       )}

@@ -21,6 +21,11 @@ import {
   saveSkipConfig,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+import {
+  type PlaybackHandoff,
+  consumePlaybackHandoff,
+  mergeRefreshedSources,
+} from '@/lib/playback-handoff';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
@@ -98,6 +103,8 @@ function PlayPageClient() {
   const [searchTitle] = useState(searchParams.get('stitle') || '');
   const [searchType] = useState(searchParams.get('stype') || '');
   const [catalog] = useState(searchParams.get('catalog') || '');
+  const [handoffToken] = useState(searchParams.get('handoff') || '');
+  const playbackHandoffRef = useRef<PlaybackHandoff | null>();
 
   // 是否需要优选
   const [needPrefer, setNeedPrefer] = useState(
@@ -590,36 +597,45 @@ function PlayPageClient() {
     updateVideoUrl(detail, currentEpisodeIndex);
   }, [detail, currentEpisodeIndex]);
 
-  // 进入页面时直接获取全部源信息
+  // 优先使用搜索页短期交接的数据；无法使用时回退到完整搜索。
   useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+    let readyTimer: ReturnType<typeof setTimeout> | null = null;
+
     const fetchSourceDetail = async (
       source: string,
       id: string
     ): Promise<SearchResult[]> => {
       try {
         const detailResponse = await fetch(
-          `/api/detail?source=${source}&id=${id}`
+          `/api/detail?source=${source}&id=${id}`,
+          { signal: controller.signal }
         );
         if (!detailResponse.ok) {
           throw new Error('获取视频详情失败');
         }
         const detailData = (await detailResponse.json()) as SearchResult;
-        setAvailableSources([detailData]);
         return [detailData];
       } catch (err) {
+        if (controller.signal.aborted) return [];
         console.error('获取视频详情失败:', err);
         return [];
-      } finally {
-        setSourceSearchLoading(false);
       }
     };
-    const fetchSourcesData = async (query: string): Promise<SearchResult[]> => {
+
+    const fetchSourcesData = async (
+      query: string,
+      background = false
+    ): Promise<SearchResult[]> => {
       // 根据搜索词获取全部源信息
+      setSourceSearchLoading(true);
       try {
         const response = await fetch(
           `/api/search?q=${encodeURIComponent(query.trim())}${
             catalog === 'douban' ? '&catalog=douban' : ''
-          }`
+          }`,
+          { signal: controller.signal }
         );
         if (!response.ok) {
           throw new Error('搜索失败');
@@ -632,22 +648,133 @@ function PlayPageClient() {
             result.title.replaceAll(' ', '').toLowerCase() ===
               videoTitleRef.current.replaceAll(' ', '').toLowerCase() &&
             (videoYearRef.current
-              ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
+              ? (result.year || 'unknown').toLowerCase() ===
+                videoYearRef.current.toLowerCase()
               : true) &&
             (searchType
               ? (searchType === 'tv' && result.episodes.length > 1) ||
                 (searchType === 'movie' && result.episodes.length === 1)
               : true)
         );
-        setAvailableSources(results);
         return results;
       } catch (err) {
-        setSourceSearchError(err instanceof Error ? err.message : '搜索失败');
-        setAvailableSources([]);
+        if (controller.signal.aborted) return [];
+        setSourceSearchError(
+          background
+            ? '后台更新播放源失败'
+            : err instanceof Error
+            ? err.message
+            : '搜索失败'
+        );
         return [];
       } finally {
-        setSourceSearchLoading(false);
+        if (!cancelled) setSourceSearchLoading(false);
       }
+    };
+
+    const restorePlaybackState = async (detailData: SearchResult) => {
+      let episodeIndex = 0;
+      let resumeTime: number | null = null;
+
+      const [recordsResult, skipConfigResult] = await Promise.allSettled([
+        getAllPlayRecords(),
+        getSkipConfig(detailData.source, detailData.id),
+      ]);
+
+      if (recordsResult.status === 'fulfilled') {
+        const allRecords = recordsResult.value;
+        const key = generateStorageKey(detailData.source, detailData.id);
+        const record = allRecords[key];
+        const recordIndex = record ? record.index - 1 : -1;
+
+        if (
+          record &&
+          recordIndex >= 0 &&
+          recordIndex < detailData.episodes.length
+        ) {
+          episodeIndex = recordIndex;
+          resumeTime = record.play_time;
+        }
+      } else {
+        console.error('读取播放记录失败:', recordsResult.reason);
+      }
+
+      if (skipConfigResult.status === 'fulfilled') {
+        const savedSkipConfig = skipConfigResult.value;
+        if (savedSkipConfig && !cancelled) {
+          setSkipConfig(savedSkipConfig);
+        }
+      } else {
+        console.error('读取跳过片头片尾配置失败:', skipConfigResult.reason);
+      }
+
+      return { episodeIndex, resumeTime };
+    };
+
+    const selectInitialDetail = async (sourcesInfo: SearchResult[]) => {
+      let detailData = sourcesInfo[0];
+
+      if (currentSource && currentId && !needPreferRef.current) {
+        const target = sourcesInfo.find(
+          (source) => source.source === currentSource && source.id === currentId
+        );
+        if (!target) return null;
+        detailData = target;
+      }
+
+      if (
+        (!currentSource || !currentId || needPreferRef.current) &&
+        optimizationEnabled
+      ) {
+        setLoadingStage('preferring');
+        setLoadingMessage('⚡ 正在优选最佳播放源...');
+        detailData = await preferBestSource(sourcesInfo);
+      }
+
+      return detailData;
+    };
+
+    const commitInitialDetail = async (
+      detailData: SearchResult,
+      sourcesInfo: SearchResult[]
+    ) => {
+      const restoredState = await restorePlaybackState(detailData);
+      if (cancelled) return;
+
+      currentSourceRef.current = detailData.source;
+      currentIdRef.current = detailData.id;
+      videoTitleRef.current = detailData.title || videoTitleRef.current;
+      videoYearRef.current = detailData.year;
+      currentEpisodeIndexRef.current = restoredState.episodeIndex;
+      detailRef.current = detailData;
+
+      setNeedPrefer(false);
+      setCurrentSource(detailData.source);
+      setCurrentId(detailData.id);
+      setVideoYear(detailData.year);
+      setVideoTitle(detailData.title || videoTitleRef.current);
+      setVideoCover(detailData.poster);
+      setVideoDoubanId(detailData.douban_id || 0);
+      setAvailableSources(sourcesInfo);
+      setCurrentEpisodeIndex(restoredState.episodeIndex);
+      resumeTimeRef.current = restoredState.resumeTime;
+      setDetail(detailData);
+
+      // 规范 URL 参数，并移除只在本次页面交接中使用的 token。
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('source', detailData.source);
+      newUrl.searchParams.set('id', detailData.id);
+      newUrl.searchParams.set('year', detailData.year);
+      newUrl.searchParams.set('title', detailData.title);
+      newUrl.searchParams.delete('prefer');
+      newUrl.searchParams.delete('handoff');
+      window.history.replaceState({}, '', newUrl.toString());
+
+      setLoadingStage('ready');
+      setLoadingMessage('✨ 准备就绪，即将开始播放...');
+      readyTimer = setTimeout(() => {
+        if (!cancelled) setLoading(false);
+      }, 1000);
     };
 
     const initAll = async () => {
@@ -663,6 +790,45 @@ function PlayPageClient() {
           ? '🎬 正在获取视频详情...'
           : '🔍 正在搜索播放源...'
       );
+
+      if (playbackHandoffRef.current === undefined) {
+        playbackHandoffRef.current = consumePlaybackHandoff(handoffToken, {
+          query: searchTitle || videoTitle,
+          title: videoTitle,
+          year: videoYear,
+          type: searchType,
+          catalog,
+          source: currentSource,
+          id: currentId,
+        });
+      }
+
+      const handoff = playbackHandoffRef.current;
+      if (handoff) {
+        const backgroundRefresh = handoff.searchComplete
+          ? null
+          : fetchSourcesData(searchTitle || videoTitle, true);
+        const detailData = await selectInitialDetail(handoff.sources);
+
+        if (!detailData) {
+          setError('未找到匹配结果');
+          setLoading(false);
+          return;
+        }
+
+        await commitInitialDetail(detailData, handoff.sources);
+
+        if (backgroundRefresh) {
+          void backgroundRefresh.then((refreshedSources) => {
+            if (cancelled || refreshedSources.length === 0) return;
+            const activeDetail = detailRef.current || detailData;
+            setAvailableSources(
+              mergeRefreshedSources(refreshedSources, activeDetail)
+            );
+          });
+        }
+        return;
+      }
 
       let sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
       if (
@@ -680,115 +846,23 @@ function PlayPageClient() {
         return;
       }
 
-      let detailData: SearchResult = sourcesInfo[0];
-      // 指定源和id且无需优选
-      if (currentSource && currentId && !needPreferRef.current) {
-        const target = sourcesInfo.find(
-          (source) => source.source === currentSource && source.id === currentId
-        );
-        if (target) {
-          detailData = target;
-        } else {
-          setError('未找到匹配结果');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 未指定源和 id 或需要优选，且开启优选开关
-      if (
-        (!currentSource || !currentId || needPreferRef.current) &&
-        optimizationEnabled
-      ) {
-        setLoadingStage('preferring');
-        setLoadingMessage('⚡ 正在优选最佳播放源...');
-
-        detailData = await preferBestSource(sourcesInfo);
-      }
-
-      console.log(detailData.source, detailData.id);
-
-      setNeedPrefer(false);
-      setCurrentSource(detailData.source);
-      setCurrentId(detailData.id);
-      setVideoYear(detailData.year);
-      setVideoTitle(detailData.title || videoTitleRef.current);
-      setVideoCover(detailData.poster);
-      setVideoDoubanId(detailData.douban_id || 0);
-      setDetail(detailData);
-      if (currentEpisodeIndex >= detailData.episodes.length) {
-        setCurrentEpisodeIndex(0);
-      }
-
-      // 规范URL参数
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('source', detailData.source);
-      newUrl.searchParams.set('id', detailData.id);
-      newUrl.searchParams.set('year', detailData.year);
-      newUrl.searchParams.set('title', detailData.title);
-      newUrl.searchParams.delete('prefer');
-      window.history.replaceState({}, '', newUrl.toString());
-
-      setLoadingStage('ready');
-      setLoadingMessage('✨ 准备就绪，即将开始播放...');
-
-      // 短暂延迟让用户看到完成状态
-      setTimeout(() => {
+      const detailData = await selectInitialDetail(sourcesInfo);
+      if (!detailData) {
+        setError('未找到匹配结果');
         setLoading(false);
-      }, 1000);
-    };
-
-    initAll();
-  }, []);
-
-  // 播放记录处理
-  useEffect(() => {
-    // 仅在初次挂载时检查播放记录
-    const initFromHistory = async () => {
-      if (!currentSource || !currentId) return;
-
-      try {
-        const allRecords = await getAllPlayRecords();
-        const key = generateStorageKey(currentSource, currentId);
-        const record = allRecords[key];
-
-        if (record) {
-          const targetIndex = record.index - 1;
-          const targetTime = record.play_time;
-
-          // 更新当前选集索引
-          if (targetIndex !== currentEpisodeIndex) {
-            setCurrentEpisodeIndex(targetIndex);
-          }
-
-          // 保存待恢复的播放进度，待播放器就绪后跳转
-          resumeTimeRef.current = targetTime;
-        }
-      } catch (err) {
-        console.error('读取播放记录失败:', err);
+        return;
       }
+
+      await commitInitialDetail(detailData, sourcesInfo);
     };
 
-    initFromHistory();
-  }, []);
+    void initAll();
 
-  // 跳过片头片尾配置处理
-  useEffect(() => {
-    // 仅在初次挂载时检查跳过片头片尾配置
-    const initSkipConfig = async () => {
-      if (!currentSource || !currentId) return;
-
-      try {
-        const config = await getSkipConfig(currentSource, currentId);
-        if (config) {
-          setSkipConfig(config);
-        }
-      } catch (err) {
-        console.error('读取跳过片头片尾配置失败:', err);
-      }
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (readyTimer) clearTimeout(readyTimer);
     };
-
-    initSkipConfig();
   }, []);
 
   // 处理换源
@@ -869,6 +943,14 @@ function PlayPageClient() {
       setVideoYear(newDetail.year);
       setVideoCover(newDetail.poster);
       setVideoDoubanId(newDetail.douban_id || 0);
+
+      currentSourceRef.current = newSource;
+      currentIdRef.current = newId;
+      videoTitleRef.current = newDetail.title || newTitle;
+      videoYearRef.current = newDetail.year;
+      currentEpisodeIndexRef.current = targetIndex;
+      detailRef.current = newDetail;
+
       setCurrentSource(newSource);
       setCurrentId(newId);
       setDetail(newDetail);

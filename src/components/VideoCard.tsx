@@ -28,6 +28,7 @@ import {
   saveFavorite,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+import { type PlaybackHandoffSelection } from '@/lib/playback-handoff';
 import { processImageUrl } from '@/lib/utils';
 import { useLongPress } from '@/hooks/useLongPress';
 
@@ -54,6 +55,7 @@ export interface VideoCardProps {
   isBangumi?: boolean;
   isAggregate?: boolean;
   origin?: 'vod' | 'live';
+  preparePlaybackHandoff?: (selection: PlaybackHandoffSelection) => string;
 }
 
 export type VideoCardHandle = {
@@ -84,6 +86,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       isBangumi = false,
       isAggregate = false,
       origin = 'vod',
+      preparePlaybackHandoff,
     }: VideoCardProps,
     ref
   ) {
@@ -137,6 +140,39 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
         ? 'movie'
         : 'tv'
       : type;
+
+    const createHandoffQuery = useCallback(() => {
+      if (
+        from !== 'search' ||
+        !actualYear ||
+        !actualSearchType ||
+        !preparePlaybackHandoff
+      ) {
+        return '';
+      }
+
+      const token = preparePlaybackHandoff({
+        query: actualQuery || actualTitle,
+        title: actualTitle.trim(),
+        year: actualYear,
+        type: actualSearchType,
+        catalog: '',
+        source: isAggregate ? undefined : actualSource,
+        id: isAggregate ? undefined : actualId,
+      });
+
+      return token ? `&handoff=${encodeURIComponent(token)}` : '';
+    }, [
+      actualId,
+      actualQuery,
+      actualSearchType,
+      actualSource,
+      actualTitle,
+      actualYear,
+      from,
+      isAggregate,
+      preparePlaybackHandoff,
+    ]);
 
     // 获取收藏状态（搜索结果页面不检查）
     useEffect(() => {
@@ -237,6 +273,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     );
 
     const handleClick = useCallback(() => {
+      const handoffQuery = createHandoffQuery();
+
       if (origin === 'live' && actualSource && actualId) {
         // 直播内容跳转到直播页面
         const url = `/live?source=${actualSource.replace(
@@ -254,7 +292,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           isAggregate ? '&prefer=true' : ''
         }${
           actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${from === 'douban' ? '&catalog=douban' : ''}`;
+        }${from === 'douban' ? '&catalog=douban' : ''}${handoffQuery}`;
         router.push(url);
       } else if (actualSource && actualId) {
         const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
@@ -263,7 +301,9 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           isAggregate ? '&prefer=true' : ''
         }${
           actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
+        }${
+          actualSearchType ? `&stype=${actualSearchType}` : ''
+        }${handoffQuery}`;
         router.push(url);
       }
     }, [
@@ -277,6 +317,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       isAggregate,
       actualQuery,
       actualSearchType,
+      createHandoffQuery,
     ]);
 
     // 新标签页播放处理函数
