@@ -1,15 +1,17 @@
 jest.mock('@/lib/db', () => ({
   db: {
     getAdminConfig: jest.fn(),
+    getAllUsers: jest.fn(),
     saveAdminConfig: jest.fn(),
   },
 }));
 
 import type { AdminConfig } from '@/lib/admin.types';
-import { getConfig } from '@/lib/config';
+import { getConfig, resetConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 const mockedDb = db as jest.Mocked<typeof db>;
+let consoleErrorSpy: jest.SpyInstance;
 
 function createConfig(siteName: string): AdminConfig {
   return {
@@ -40,8 +42,34 @@ function createConfig(siteName: string): AdminConfig {
 
 describe('getConfig cache refresh', () => {
   beforeEach(() => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
     mockedDb.getAdminConfig.mockReset();
+    mockedDb.getAllUsers.mockReset();
     mockedDb.saveAdminConfig.mockReset();
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('does not initialize or persist when the initial database read fails', async () => {
+    const readError = new Error('temporary database failure');
+    mockedDb.getAdminConfig.mockRejectedValue(readError);
+
+    await expect(getConfig({ forceRefresh: true })).rejects.toBe(readError);
+
+    expect(mockedDb.getAllUsers).not.toHaveBeenCalled();
+    expect(mockedDb.saveAdminConfig).not.toHaveBeenCalled();
+  });
+
+  it('initializes and persists when the database confirms no config exists', async () => {
+    mockedDb.getAdminConfig.mockResolvedValue(null);
+    mockedDb.getAllUsers.mockResolvedValue([]);
+
+    await expect(getConfig({ forceRefresh: true })).resolves.toBeDefined();
+
+    expect(mockedDb.getAllUsers).toHaveBeenCalledTimes(1);
+    expect(mockedDb.saveAdminConfig).toHaveBeenCalledTimes(1);
   });
 
   it('reloads persisted configuration when forceRefresh is requested', async () => {
@@ -64,6 +92,30 @@ describe('getConfig cache refresh', () => {
 
     await getConfig({ forceRefresh: true });
 
+    expect(mockedDb.saveAdminConfig).not.toHaveBeenCalled();
+  });
+
+  it('returns the cached config without persisting when a refresh read fails', async () => {
+    const persistedConfig = createConfig('cached');
+    mockedDb.getAdminConfig
+      .mockResolvedValueOnce(persistedConfig)
+      .mockRejectedValueOnce(new Error('temporary database failure'));
+
+    await getConfig({ forceRefresh: true });
+
+    await expect(getConfig({ forceRefresh: true })).resolves.toBe(
+      persistedConfig
+    );
+    expect(mockedDb.saveAdminConfig).not.toHaveBeenCalled();
+  });
+
+  it('does not rebuild or persist during reset when the database read fails', async () => {
+    const readError = new Error('temporary database failure');
+    mockedDb.getAdminConfig.mockRejectedValue(readError);
+
+    await expect(resetConfig()).rejects.toBe(readError);
+
+    expect(mockedDb.getAllUsers).not.toHaveBeenCalled();
     expect(mockedDb.saveAdminConfig).not.toHaveBeenCalled();
   });
 });

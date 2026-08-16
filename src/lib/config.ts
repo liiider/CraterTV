@@ -310,10 +310,11 @@ export async function getConfig(
     if (cachedConfig) {
       return cachedConfig;
     }
+    throw e;
   }
 
   // db 中无配置，执行一次初始化
-  if (!adminConfig) {
+  if (adminConfig === null) {
     adminConfig = await getInitConfig('');
     shouldPersistInitialConfig = true;
   }
@@ -419,8 +420,9 @@ export async function resetConfig() {
     originConfig = await db.getAdminConfig();
   } catch (e) {
     console.error('获取管理员配置失败:', e);
+    throw e;
   }
-  if (!originConfig) {
+  if (originConfig === null) {
     originConfig = {} as AdminConfig;
   }
   const adminConfig = await getInitConfig(
