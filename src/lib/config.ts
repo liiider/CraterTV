@@ -512,7 +512,9 @@ export async function isSafeSearchEnabledForUser(
     return false;
   }
 
-  const config = await getConfig();
+  // 用户组权限可能由另一个服务实例修改，不能用无过期时间的进程缓存
+  // 判断安全搜索，否则解除所有分组后仍可能继续受到旧策略限制。
+  const config = await getConfig({ forceRefresh: true });
   const userConfig = config.UserConfig.Users.find((u) => u.username === user);
   if (!userConfig || userConfig.banned || !userConfig.tags?.length) {
     return false;
