@@ -6,9 +6,11 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, isSafeSearchEnabledForUser } from '@/lib/config';
 import {
   getCanonicalSearchTitles,
+  SEARCH_BATCH_SIZE,
   searchExactTitlesFromSite,
   searchFromApiSiteWithTimeout,
 } from '@/lib/safe-search';
+import { runInBatches } from '@/lib/source-validation';
 
 export const runtime = 'nodejs';
 
@@ -106,7 +108,7 @@ export async function GET(request: NextRequest) {
       let completedSources = 0;
       const allResults: unknown[] = [];
 
-      const searchPromises = apiSites.map(async (site) => {
+      const searchSite = async (site: (typeof apiSites)[number]) => {
         try {
           const results = canonicalTitles
             ? await searchExactTitlesFromSite(site, canonicalTitles)
@@ -167,9 +169,9 @@ export async function GET(request: NextRequest) {
             }
           }
         }
-      });
+      };
 
-      await Promise.allSettled(searchPromises);
+      await runInBatches(apiSites, SEARCH_BATCH_SIZE, searchSite);
     },
 
     cancel() {

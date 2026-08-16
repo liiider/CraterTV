@@ -128,4 +128,33 @@ describe('safeSearchFromApiSites', () => {
       [result('two', 'two', '三体')]
     );
   });
+
+  it('does not start every normal source at the same time', async () => {
+    const manySites = Array.from({ length: 17 }, (_, index) => ({
+      key: `site-${index}`,
+      name: `Site ${index}`,
+      api: `https://site-${index}.invalid`,
+    }));
+    const releases: Array<() => void> = [];
+
+    jest.mocked(searchFromApi).mockImplementation(
+      (site) =>
+        new Promise((resolve) => {
+          releases.push(() => resolve([result(site.key, site.key, '三体')]));
+        })
+    );
+
+    const searchPromise = safeSearchFromApiSites(manySites, '三体', false);
+    await Promise.resolve();
+
+    expect(searchFromApi).toHaveBeenCalledTimes(16);
+
+    releases.splice(0, 16).forEach((release) => release());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(searchFromApi).toHaveBeenCalledTimes(17);
+
+    releases.forEach((release) => release());
+    await expect(searchPromise).resolves.toHaveLength(17);
+  });
 });
