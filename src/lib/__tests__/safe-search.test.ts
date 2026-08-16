@@ -114,4 +114,18 @@ describe('safeSearchFromApiSites', () => {
     expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
     expect(results).toHaveLength(2);
   });
+
+  it('keeps successful source results when another normal source fails', async () => {
+    jest.mocked(searchFromApi).mockImplementation(async (site) => {
+      if (site.key === 'one') {
+        throw new Error('source unavailable');
+      }
+
+      return [result(site.key, site.key, '三体')];
+    });
+
+    await expect(safeSearchFromApiSites(sites, '三体', false)).resolves.toEqual(
+      [result('two', 'two', '三体')]
+    );
+  });
 });

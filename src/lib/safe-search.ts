@@ -71,10 +71,17 @@ export async function safeSearchFromApiSites(
   if (apiSites.length === 0) return [];
 
   if (!safeSearchEnabled) {
-    const results = await Promise.all(
+    const results = await Promise.allSettled(
       apiSites.map((site) => searchFromApiSiteWithTimeout(site, query))
     );
-    return dedupeResults(results.flat());
+    return dedupeResults(
+      results
+        .filter(
+          (result): result is PromiseFulfilledResult<SearchResult[]> =>
+            result.status === 'fulfilled'
+        )
+        .flatMap((result) => result.value)
+    );
   }
 
   const canonicalTitles =

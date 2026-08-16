@@ -5,8 +5,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { API_CONFIG } from '@/lib/config';
+import { runInBatches } from '@/lib/source-validation';
 
 export const runtime = 'nodejs';
+
+const VALIDATION_BATCH_SIZE = 16;
 
 export async function GET(request: NextRequest) {
   const authInfo = getAuthInfoFromCookie(request);
@@ -77,8 +80,7 @@ export async function GET(request: NextRequest) {
       // 记录已完成的源数量
       let completedSources = 0;
 
-      // 为每个源创建验证 Promise
-      const validationPromises = apiSites.map(async (site) => {
+      const validateSite = async (site: (typeof apiSites)[number]) => {
         try {
           // 构建搜索URL，只获取第一页
           const searchUrl = `${site.api}?ac=videolist&wd=${encodeURIComponent(searchKeyword)}`;
@@ -182,10 +184,9 @@ export async function GET(request: NextRequest) {
             }
           }
         }
-      });
+      };
 
-      // 等待所有验证完成
-      await Promise.allSettled(validationPromises);
+      await runInBatches(apiSites, VALIDATION_BATCH_SIZE, validateSite);
     },
 
     cancel() {
