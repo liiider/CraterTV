@@ -3,7 +3,7 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    container_name: lunatv-redis
+    container_name: cratertv-redis
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
@@ -17,7 +17,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: lunatv-app
+    container_name: cratertv-app
     ports:
       - '3000:3000'
     depends_on:
@@ -33,7 +33,7 @@ services:
       # 站长密码
       - PASSWORD=admin123
       # 站点名称（可选）
-      - NEXT_PUBLIC_SITE_NAME=MoonTV
+      - NEXT_PUBLIC_SITE_NAME=CraterTV
 
 volumes:
   redis-data:
