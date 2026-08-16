@@ -1,10 +1,12 @@
 import { ApiSite } from '@/lib/config';
 import { searchCanonicalTitlesFromDouban } from '@/lib/douban-search';
 import { searchFromApi } from '@/lib/downstream';
+import { runInBatches } from '@/lib/source-validation';
 import { searchCanonicalTitlesFromTmdb } from '@/lib/tmdb-search';
 import { SearchResult } from '@/lib/types';
 
 const SEARCH_TIMEOUT_MS = 20000;
+export const SEARCH_BATCH_SIZE = 16;
 
 export function normalizeSearchTitle(title: string) {
   return title
@@ -71,8 +73,10 @@ export async function safeSearchFromApiSites(
   if (apiSites.length === 0) return [];
 
   if (!safeSearchEnabled) {
-    const results = await Promise.allSettled(
-      apiSites.map((site) => searchFromApiSiteWithTimeout(site, query))
+    const results = await runInBatches(
+      apiSites,
+      SEARCH_BATCH_SIZE,
+      (site) => searchFromApiSiteWithTimeout(site, query)
     );
     return dedupeResults(
       results
