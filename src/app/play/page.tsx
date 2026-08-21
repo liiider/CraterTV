@@ -22,6 +22,12 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import {
+  type PlaybackDiagnosticEvent,
+  describeDiagnosticError,
+  getMediaSnapshot,
+  sanitizePlaybackUrl,
+} from '@/lib/playback-diagnostics';
+import {
   type PlaybackHandoff,
   consumePlaybackHandoff,
   mergeRefreshedSources,
@@ -197,6 +203,8 @@ function PlayPageClient() {
 
   const artPlayerRef = useRef<any>(null);
   const artRef = useRef<HTMLDivElement | null>(null);
+  const playbackDiagnosticsRef = useRef<PlaybackDiagnosticEvent[]>([]);
+  const playbackDiagnosticsCleanupRef = useRef<(() => void) | null>(null);
 
   // Wake Lock 相关
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -469,8 +477,121 @@ function PlayPageClient() {
     }
   };
 
+  const recordPlaybackDiagnostic = (
+    name: string,
+    details?: Record<string, unknown>
+  ) => {
+    const event = { at: Date.now(), name, details };
+    playbackDiagnosticsRef.current.push(event);
+    if (playbackDiagnosticsRef.current.length > 100) {
+      playbackDiagnosticsRef.current.splice(
+        0,
+        playbackDiagnosticsRef.current.length - 100
+      );
+    }
+    return event;
+  };
+
+  const reportPlaybackDiagnostic = (
+    event: 'playback_stall_detected' | 'hls_fatal_error' | 'player_error',
+    video: HTMLVideoElement | null,
+    details?: Record<string, unknown>
+  ) => {
+    recordPlaybackDiagnostic(event, details);
+
+    const playbackUrl = sanitizePlaybackUrl(
+      video?.currentSrc || videoUrl || ''
+    );
+    const payload = {
+      event,
+      context: {
+        title: videoTitleRef.current,
+        source: currentSourceRef.current,
+        id: currentIdRef.current,
+        episode: currentEpisodeIndexRef.current + 1,
+        playbackUrl,
+        media: getMediaSnapshot(video),
+        details,
+        device: {
+          platform: navigator.platform,
+          language: navigator.language,
+          viewport: `${window.innerWidth}x${window.innerHeight}`,
+        },
+      },
+      recentEvents: playbackDiagnosticsRef.current.slice(-50),
+    };
+
+    void fetch('/api/playback-diagnostics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => undefined);
+  };
+
+  const attachPlaybackDiagnostics = (video: HTMLVideoElement) => {
+    playbackDiagnosticsCleanupRef.current?.();
+
+    const mediaEvents = [
+      'playing',
+      'waiting',
+      'stalled',
+      'seeking',
+      'seeked',
+      'pause',
+      'ended',
+    ] as const;
+    const listeners = mediaEvents.map((name) => {
+      const listener = () =>
+        recordPlaybackDiagnostic(
+          `media_${name}`,
+          getMediaSnapshot(video) || {}
+        );
+      video.addEventListener(name, listener);
+      return { name, listener };
+    });
+
+    let lastObservedTime = video.currentTime || 0;
+    let lastProgressAt = Date.now();
+    let stallReported = false;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      const currentTime = video.currentTime || 0;
+
+      if (video.paused || video.ended || video.seeking) {
+        lastObservedTime = currentTime;
+        lastProgressAt = now;
+        stallReported = false;
+        return;
+      }
+
+      if (Math.abs(currentTime - lastObservedTime) >= 0.25) {
+        lastObservedTime = currentTime;
+        lastProgressAt = now;
+        stallReported = false;
+        return;
+      }
+
+      if (!stallReported && now - lastProgressAt >= 8000) {
+        stallReported = true;
+        reportPlaybackDiagnostic('playback_stall_detected', video, {
+          unchangedForMs: now - lastProgressAt,
+        });
+      }
+    }, 1000);
+
+    playbackDiagnosticsCleanupRef.current = () => {
+      window.clearInterval(timer);
+      listeners.forEach(({ name, listener }) => {
+        video.removeEventListener(name, listener);
+      });
+      playbackDiagnosticsCleanupRef.current = null;
+    };
+  };
+
   // 清理播放器资源的统一函数
   const cleanupPlayer = () => {
+    playbackDiagnosticsCleanupRef.current?.();
     if (artPlayerRef.current) {
       try {
         // 销毁 HLS 实例
@@ -1278,8 +1399,6 @@ function PlayPageClient() {
       setError('视频地址无效');
       return;
     }
-    console.log(videoUrl);
-
     // 检测是否为WebKit浏览器
     const isWebkit =
       typeof window !== 'undefined' &&
@@ -1360,7 +1479,8 @@ function PlayPageClient() {
             const hls = new Hls({
               debug: false, // 关闭日志
               enableWorker: true, // WebWorker 解码，降低主线程压力
-              lowLatencyMode: true, // 开启低延迟 LL-HLS
+              lowLatencyMode: false,
+              appendTimeout: 10000,
 
               /* 缓冲/内存相关 */
               maxBufferLength: 30, // 前向缓冲最大 30s，过大容易导致高延迟
@@ -1373,9 +1493,58 @@ function PlayPageClient() {
             video.hls = hls;
 
             ensureVideoSource(video, url);
+            attachPlaybackDiagnostics(video);
+
+            const getFragmentDetails = (data: any) => {
+              const fragment = data?.frag;
+              if (!fragment) return {};
+              return {
+                sn: fragment.sn,
+                start: fragment.start,
+                duration: fragment.duration,
+                cc: fragment.cc,
+                url: sanitizePlaybackUrl(fragment.url || ''),
+              };
+            };
+
+            hls.on(Hls.Events.FRAG_LOADING, (_event: any, data: any) => {
+              recordPlaybackDiagnostic('hls_frag_loading', {
+                fragment: getFragmentDetails(data),
+              });
+            });
+
+            hls.on(Hls.Events.FRAG_LOADED, (_event: any, data: any) => {
+              recordPlaybackDiagnostic('hls_frag_loaded', {
+                fragment: getFragmentDetails(data),
+              });
+            });
+
+            hls.on(Hls.Events.FRAG_BUFFERED, (_event: any, data: any) => {
+              recordPlaybackDiagnostic('hls_frag_buffered', {
+                fragment: getFragmentDetails(data),
+                media: getMediaSnapshot(video),
+              });
+            });
 
             hls.on(Hls.Events.ERROR, function (event: any, data: any) {
               console.error('HLS Error:', event, data);
+              const errorDetails = {
+                type: data.type,
+                errorDetail: data.details,
+                fatal: Boolean(data.fatal),
+                reason: data.reason || '',
+                responseCode: data.response?.code || null,
+                fragment: getFragmentDetails(data),
+              };
+              if (data.fatal) {
+                reportPlaybackDiagnostic(
+                  'hls_fatal_error',
+                  video,
+                  errorDetails
+                );
+              } else {
+                recordPlaybackDiagnostic('hls_error', errorDetails);
+              }
               if (data.fatal) {
                 switch (data.type) {
                   case Hls.ErrorTypes.NETWORK_ERROR:
@@ -1604,6 +1773,11 @@ function PlayPageClient() {
 
       artPlayerRef.current.on('error', (err: any) => {
         console.error('播放器错误:', err);
+        reportPlaybackDiagnostic(
+          'player_error',
+          artPlayerRef.current?.video || null,
+          { message: describeDiagnosticError(err) }
+        );
         if (artPlayerRef.current.currentTime > 0) {
           return;
         }
