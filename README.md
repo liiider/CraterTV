@@ -12,6 +12,8 @@ CraterTV 是一个基于 Next.js 的影视聚合与播放管理工具。项目�
 
 当前版本以 [LunaTV v100.1.3](https://github.com/MoonTechLab/LunaTV) 为上游基线，保留影视聚合、播放、后台配置和多种存储方式，并增加以下调整：
 
+CraterTV 使用独立的语义化版本号，当前版本为 `1.4.1`。上游版本只用于标记同步基线，不再作为 CraterTV 的发布版本号。
+
 | 范围         | CraterTV 调整                                                                                                                                                                                       |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 部署         | 支持 Vercel 和普通 Node.js 部署；上游当前主要提供 Docker 部署。                                                                                                                                     |
@@ -49,7 +51,7 @@ CraterTV 是一个基于 Next.js 的影视聚合与播放管理工具。项目�
 ![Next.js](https://img.shields.io/badge/Next.js-14-000?logo=nextdotjs)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-38bdf8?logo=tailwindcss)
 ![TypeScript](https://img.shields.io/badge/TypeScript-4.x-3178c6?logo=typescript)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-green)
 
 </div>
 
@@ -278,6 +280,10 @@ TMDB 令牌应写入部署平台的服务端环境变量或本地 `.env.local`�
 - [CMLiussss](https://github.com/cmliu) 提供豆瓣 CDN 服务。
 - 感谢所有为相关生态提供工具、文档和问题反馈的开发者。
 
-## License
+## 许可与上游归属
 
-[MIT](LICENSE)
+CraterTV 修改自 [MoonTechLab/LunaTV](https://github.com/MoonTechLab/LunaTV)，当前上游基线为 LunaTV `v100.1.3`。CraterTV 与其维护者不代表 MoonTechLab 或 LunaTV，也未获得其背书。
+
+本项目依照 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 许可：使用或分享时须保留原作者和项目归属、提供许可链接并注明修改；不得将授权材料用于商业目的；分享改编材料时须采用相同许可。完整法律文本见 [LICENSE](LICENSE)，来源和修改说明见 [NOTICE](NOTICE)。
+
+第三方依赖、字体、图标及其他材料继续适用各自的许可条款。

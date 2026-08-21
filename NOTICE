@@ -1,0 +1,18 @@
+CraterTV
+
+This project is adapted from LunaTV by MoonTechLab and its contributors.
+
+Upstream project: https://github.com/MoonTechLab/LunaTV
+Upstream baseline: LunaTV v100.1.3
+CraterTV repository: https://github.com/liiider/CraterTV
+License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+License text: LICENSE
+
+CraterTV changes include project branding, Vercel and Node.js deployment support,
+permission controls, safe search, configuration protection, search resilience,
+playback handoff, player dependency updates, and playback diagnostics.
+
+CraterTV is an independent derivative project. It is not endorsed by or affiliated
+with MoonTechLab or LunaTV.
+
+Third-party dependencies and materials remain subject to their own licenses.

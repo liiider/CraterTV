@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { changelog, ChangelogEntry } from '@/lib/changelog';
-import { CURRENT_VERSION } from '@/lib/version';
+import { CURRENT_VERSION, UPSTREAM_BASE_VERSION } from '@/lib/version';
 import { compareVersions, UpdateStatus } from '@/lib/version_check';
 
 interface VersionPanelProps {
@@ -319,7 +319,7 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
         <div className='flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
           <div className='flex items-center gap-2 sm:gap-3'>
             <h3 className='text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200'>
-              版本信息
+              CraterTV 版本
             </h3>
             <div className='flex flex-wrap items-center gap-1 sm:gap-2'>
               <span className='px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full'>
@@ -346,6 +346,18 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
         {/* 内容区域 */}
         <div className='p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-120px)]'>
           <div className='space-y-3 sm:space-y-6'>
+            <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400'>
+              CraterTV 独立版本号 · 上游基线{' '}
+              <a
+                href='https://github.com/MoonTechLab/LunaTV'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='text-blue-600 hover:underline dark:text-blue-400'
+              >
+                LunaTV v{UPSTREAM_BASE_VERSION}
+              </a>
+            </p>
+
             {/* 远程更新信息 */}
             {hasUpdate && (
               <div className='bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 sm:p-4'>
