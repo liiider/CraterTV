@@ -112,10 +112,11 @@ describe('safeSearchFromApiSites', () => {
     expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
   });
 
-  it('allows a trailing supplementary-edition marker to match the catalog title', async () => {
+  it('requires an exact normalized catalog title match', async () => {
     jest
       .mocked(searchCanonicalTitlesFromDouban)
       .mockResolvedValue(['脱口秀和Ta的朋友们 第三季']);
+    jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue([]);
     jest
       .mocked(searchFromApi)
       .mockResolvedValue([
@@ -134,11 +135,22 @@ describe('safeSearchFromApiSites', () => {
       true
     );
 
-    expect(results.map((item) => item.id)).toEqual([
-      'standard',
-      'supplementary',
-    ]);
-    expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
+    expect(results.map((item) => item.id)).toEqual(['standard']);
+    expect(searchCanonicalTitlesFromTmdb).toHaveBeenCalledWith(
+      '脱口秀和Ta的朋友们第三季（加更版）'
+    );
+  });
+
+  it('does not allow a sequel based only on a catalog title prefix', async () => {
+    jest.mocked(searchCanonicalTitlesFromDouban).mockResolvedValue(['三体']);
+    jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue([]);
+    jest
+      .mocked(searchFromApi)
+      .mockResolvedValue([result('one', 'sequel', '三体2', '2026')]);
+
+    await expect(
+      safeSearchFromApiSites([sites[0]], '三体2', true)
+    ).resolves.toEqual([]);
   });
 
   it('validates the same normalized title and year only once', async () => {

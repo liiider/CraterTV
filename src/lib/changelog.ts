@@ -11,6 +11,28 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.4',
+    date: '2026-08-22',
+    added: [
+      // 无新增内容
+    ],
+    changed: ['安全搜索改为规范化标题精确匹配，不再单独放行版本后缀或续集'],
+    fixed: [
+      // 无修复内容
+    ],
+  },
+  {
+    version: '1.4.3',
+    date: '2026-08-22',
+    added: [
+      // 无新增内容
+    ],
+    changed: ['安全搜索曾改为影视库合规标题前缀匹配'],
+    fixed: [
+      // 无修复内容
+    ],
+  },
+  {
     version: '1.4.2',
     date: '2026-08-22',
     added: [

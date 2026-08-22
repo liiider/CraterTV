@@ -16,10 +16,6 @@ export function normalizeSearchTitle(title: string) {
     .replace(/[《》「」『』【】()[\]（）_:：,，.。!！?？-]/g, '');
 }
 
-function normalizeCatalogMatchTitle(title: string) {
-  return normalizeSearchTitle(title).replace(/加更版$/, '');
-}
-
 function dedupeResults(results: SearchResult[]) {
   const seen = new Set<string>();
   return results.filter((result) => {
@@ -46,9 +42,8 @@ export async function searchFromApiSiteWithTimeout(
 }
 
 function containsExactTitle(titles: string[], normalizedTitle: string) {
-  const catalogMatchTitle = normalizeCatalogMatchTitle(normalizedTitle);
   return titles.some(
-    (title) => normalizeCatalogMatchTitle(title) === catalogMatchTitle
+    (title) => normalizeSearchTitle(title) === normalizedTitle
   );
 }
 
