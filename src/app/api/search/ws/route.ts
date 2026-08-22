@@ -5,9 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, isSafeSearchEnabledForUser } from '@/lib/config';
 import {
-  getCanonicalSearchTitles,
+  createSafeSearchResultVerifier,
+  filterSafeSearchResults,
   SEARCH_BATCH_SIZE,
-  searchExactTitlesFromSite,
   searchFromApiSiteWithTimeout,
 } from '@/lib/safe-search';
 import { runInBatches } from '@/lib/source-validation';
@@ -84,35 +84,18 @@ export async function GET(request: NextRequest) {
         return;
       }
 
-      let canonicalTitles: string[] | null = null;
-      if (safeSearchEnabled) {
-        canonicalTitles = [];
-        try {
-          canonicalTitles = await getCanonicalSearchTitles(query);
-        } catch (error) {
-          console.warn('TMDB canonical search failed:', error);
-        }
-
-        if (canonicalTitles.length === 0) {
-          sendEvent({
-            type: 'complete',
-            totalResults: 0,
-            completedSources: apiSites.length,
-            timestamp: Date.now(),
-          });
-          controller.close();
-          return;
-        }
-      }
-
       let completedSources = 0;
       const allResults: unknown[] = [];
+      const verifyResult = safeSearchEnabled
+        ? createSafeSearchResultVerifier()
+        : null;
 
       const searchSite = async (site: (typeof apiSites)[number]) => {
         try {
-          const results = canonicalTitles
-            ? await searchExactTitlesFromSite(site, canonicalTitles)
-            : await searchFromApiSiteWithTimeout(site, query);
+          const sourceResults = await searchFromApiSiteWithTimeout(site, query);
+          const results = verifyResult
+            ? await filterSafeSearchResults(sourceResults, verifyResult)
+            : sourceResults;
           completedSources++;
 
           if (!streamClosed) {

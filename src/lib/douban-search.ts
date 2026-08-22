@@ -1,6 +1,5 @@
 const DOUBAN_SUGGEST_URL = 'https://movie.douban.com/j/subject_suggest';
 const DOUBAN_SEARCH_TIMEOUT_MS = 8000;
-const MAX_CANONICAL_TITLES = 8;
 
 interface DoubanSuggestItem {
   type?: unknown;
@@ -42,7 +41,6 @@ function extractCanonicalTitles(payload: unknown) {
 
     normalizedTitles.add(normalizedTitle);
     titles.push(title);
-    if (titles.length >= MAX_CANONICAL_TITLES) break;
   }
 
   return titles;

@@ -31,4 +31,21 @@ describe('searchCanonicalTitlesFromDouban', () => {
       searchCanonicalTitlesFromDouban('三体', { fetchImpl: fetchMock })
     ).resolves.toEqual([]);
   });
+
+  it('keeps all movie and TV titles for exact result validation', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        ...Array.from({ length: 8 }, (_, index) => ({
+          type: 'movie',
+          title: `相似结果${index}`,
+        })),
+        { type: 'movie', title: '目标标题' },
+      ],
+    });
+
+    await expect(
+      searchCanonicalTitlesFromDouban('目标标题', { fetchImpl: fetchMock })
+    ).resolves.toContain('目标标题');
+  });
 });

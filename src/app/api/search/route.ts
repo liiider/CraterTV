@@ -29,9 +29,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const trustedCanonicalTitles =
-    searchParams.get('catalog') === 'douban' ? [query] : undefined;
-
   const [apiSites, safeSearchEnabled] = await Promise.all([
     getAvailableApiSites(authInfo.username),
     isSafeSearchEnabledForUser(authInfo.username),
@@ -41,8 +38,7 @@ export async function GET(request: NextRequest) {
     const results = await safeSearchFromApiSites(
       apiSites,
       query,
-      safeSearchEnabled,
-      trustedCanonicalTitles
+      safeSearchEnabled
     );
 
     if (results.length === 0) {

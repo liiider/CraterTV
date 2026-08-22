@@ -66,4 +66,31 @@ describe('searchCanonicalTitlesFromTmdb', () => {
       })
     ).resolves.toEqual([]);
   });
+
+  it('keeps all non-adult titles for exact result validation', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: [
+          ...Array.from({ length: 8 }, (_, index) => ({
+            media_type: 'movie',
+            adult: false,
+            title: `相似结果${index}`,
+          })),
+          {
+            media_type: 'movie',
+            adult: false,
+            title: '目标标题',
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      searchCanonicalTitlesFromTmdb('目标标题', {
+        token: 'test-token',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toContain('目标标题');
+  });
 });

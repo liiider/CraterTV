@@ -1,6 +1,5 @@
 const TMDB_API_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_SEARCH_TIMEOUT_MS = 8000;
-const MAX_CANONICAL_TITLES = 8;
 
 interface TmdbSearchItem {
   media_type?: unknown;
@@ -69,10 +68,6 @@ function extractCanonicalTitles(payload: unknown) {
     } else {
       addUniqueTitle(titles, normalizedTitles, value.name);
       addUniqueTitle(titles, normalizedTitles, value.original_name);
-    }
-
-    if (titles.length >= MAX_CANONICAL_TITLES) {
-      return titles.slice(0, MAX_CANONICAL_TITLES);
     }
   }
 

@@ -1876,8 +1876,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         启用影视库安全搜索
                       </span>
                       <span className='mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-400'>
-                        优先使用豆瓣影视库名称；豆瓣无结果时由 TMDB
-                        排除成人内容后再过滤播放源。
+                        原始关键词搜索播放源后，由豆瓣或 TMDB
+                        验证返回标题并过滤成人内容。
                       </span>
                     </span>
                   </label>
@@ -2073,8 +2073,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         启用影视库安全搜索
                       </span>
                       <span className='mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-400'>
-                        优先使用豆瓣影视库名称；豆瓣无结果时由 TMDB
-                        排除成人内容后再过滤播放源。
+                        原始关键词搜索播放源后，由豆瓣或 TMDB
+                        验证返回标题并过滤成人内容。
                       </span>
                     </span>
                   </label>

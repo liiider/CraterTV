@@ -7,6 +7,7 @@ import { SearchResult } from '@/lib/types';
 
 const SEARCH_TIMEOUT_MS = 20000;
 export const SEARCH_BATCH_SIZE = 16;
+export const SAFE_SEARCH_VALIDATION_CONCURRENCY = 8;
 
 export function normalizeSearchTitle(title: string) {
   return title
@@ -40,63 +41,110 @@ export async function searchFromApiSiteWithTimeout(
   ]);
 }
 
-export async function getCanonicalSearchTitles(query: string) {
-  const doubanTitles = await searchCanonicalTitlesFromDouban(query);
-  if (doubanTitles.length > 0) return doubanTitles;
-
-  return searchCanonicalTitlesFromTmdb(query);
+function containsExactTitle(titles: string[], normalizedTitle: string) {
+  return titles.some(
+    (title) => normalizeSearchTitle(title) === normalizedTitle
+  );
 }
 
-export async function searchExactTitlesFromSite(
-  site: ApiSite,
-  titles: string[]
-) {
-  const results = await Promise.all(
-    titles.map(async (title) => {
-      const normalizedTitle = normalizeSearchTitle(title);
-      const siteResults = await searchFromApiSiteWithTimeout(site, title);
-      return siteResults.filter(
-        (result) => normalizeSearchTitle(result.title || '') === normalizedTitle
-      );
-    })
+async function verifySafeSearchResult(result: SearchResult) {
+  const title = result.title?.trim();
+  const normalizedTitle = normalizeSearchTitle(title || '');
+  if (!title || !normalizedTitle) return false;
+
+  try {
+    const doubanTitles = await searchCanonicalTitlesFromDouban(title);
+    if (containsExactTitle(doubanTitles, normalizedTitle)) return true;
+  } catch {
+    // Treat an unavailable catalog as no match and continue to TMDB.
+  }
+
+  try {
+    const tmdbTitles = await searchCanonicalTitlesFromTmdb(title);
+    return containsExactTitle(tmdbTitles, normalizedTitle);
+  } catch {
+    return false;
+  }
+}
+
+export type SafeSearchResultVerifier = (
+  result: SearchResult
+) => Promise<boolean>;
+
+function createValidationScheduler(maxConcurrent: number) {
+  let activeCount = 0;
+  const pendingTasks: Array<() => void> = [];
+
+  return <T>(task: () => Promise<T>) =>
+    new Promise<T>((resolve, reject) => {
+      const execute = async () => {
+        activeCount++;
+        try {
+          resolve(await task());
+        } catch (error) {
+          reject(error);
+        } finally {
+          activeCount--;
+          pendingTasks.shift()?.();
+        }
+      };
+
+      if (activeCount < maxConcurrent) {
+        void execute();
+      } else {
+        pendingTasks.push(() => void execute());
+      }
+    });
+}
+
+export function createSafeSearchResultVerifier(): SafeSearchResultVerifier {
+  const validations = new Map<string, Promise<boolean>>();
+  const scheduleValidation = createValidationScheduler(
+    SAFE_SEARCH_VALIDATION_CONCURRENCY
   );
 
-  return dedupeResults(results.flat());
+  return (result) => {
+    const normalizedTitle = normalizeSearchTitle(result.title || '');
+    if (!normalizedTitle) return Promise.resolve(false);
+
+    const key = `${normalizedTitle}:${result.year || 'unknown'}`;
+    let validation = validations.get(key);
+    if (!validation) {
+      validation = scheduleValidation(() => verifySafeSearchResult(result));
+      validations.set(key, validation);
+    }
+
+    return validation;
+  };
+}
+
+export async function filterSafeSearchResults(
+  results: SearchResult[],
+  verifyResult: SafeSearchResultVerifier = createSafeSearchResultVerifier()
+) {
+  const verdicts = await Promise.all(results.map(verifyResult));
+  return results.filter((_, index) => verdicts[index]);
 }
 
 export async function safeSearchFromApiSites(
   apiSites: ApiSite[],
   query: string,
-  safeSearchEnabled = false,
-  trustedCanonicalTitles?: string[]
+  safeSearchEnabled = false
 ) {
   if (apiSites.length === 0) return [];
 
-  if (!safeSearchEnabled) {
-    const results = await runInBatches(
-      apiSites,
-      SEARCH_BATCH_SIZE,
-      (site) => searchFromApiSiteWithTimeout(site, query)
-    );
-    return dedupeResults(
-      results
-        .filter(
-          (result): result is PromiseFulfilledResult<SearchResult[]> =>
-            result.status === 'fulfilled'
-        )
-        .flatMap((result) => result.value)
-    );
-  }
-
-  const canonicalTitles =
-    trustedCanonicalTitles && trustedCanonicalTitles.length > 0
-      ? trustedCanonicalTitles
-      : await getCanonicalSearchTitles(query);
-  if (canonicalTitles.length === 0) return [];
-
-  const results = await Promise.all(
-    apiSites.map((site) => searchExactTitlesFromSite(site, canonicalTitles))
+  const results = await runInBatches(apiSites, SEARCH_BATCH_SIZE, (site) =>
+    searchFromApiSiteWithTimeout(site, query)
+  );
+  const dedupedResults = dedupeResults(
+    results
+      .filter(
+        (result): result is PromiseFulfilledResult<SearchResult[]> =>
+          result.status === 'fulfilled'
+      )
+      .flatMap((result) => result.value)
   );
 
-  return dedupeResults(results.flat());
+  if (!safeSearchEnabled) return dedupedResults;
+  return filterSafeSearchResults(dedupedResults);
 }
