@@ -16,10 +16,6 @@ export function normalizeSearchTitle(title: string) {
     .replace(/[《》「」『』【】()[\]（）_:：,，.。!！?？-]/g, '');
 }
 
-function normalizeCatalogMatchTitle(title: string) {
-  return normalizeSearchTitle(title).replace(/加更版$/, '');
-}
-
 function dedupeResults(results: SearchResult[]) {
   const seen = new Set<string>();
   return results.filter((result) => {
@@ -45,11 +41,17 @@ export async function searchFromApiSiteWithTimeout(
   ]);
 }
 
-function containsExactTitle(titles: string[], normalizedTitle: string) {
-  const catalogMatchTitle = normalizeCatalogMatchTitle(normalizedTitle);
-  return titles.some(
-    (title) => normalizeCatalogMatchTitle(title) === catalogMatchTitle
-  );
+function containsCatalogTitlePrefix(
+  titles: string[],
+  normalizedResultTitle: string
+) {
+  return titles.some((title) => {
+    const normalizedCatalogTitle = normalizeSearchTitle(title);
+    return (
+      normalizedCatalogTitle.length > 0 &&
+      normalizedResultTitle.startsWith(normalizedCatalogTitle)
+    );
+  });
 }
 
 async function verifySafeSearchResult(result: SearchResult) {
@@ -59,14 +61,14 @@ async function verifySafeSearchResult(result: SearchResult) {
 
   try {
     const doubanTitles = await searchCanonicalTitlesFromDouban(title);
-    if (containsExactTitle(doubanTitles, normalizedTitle)) return true;
+    if (containsCatalogTitlePrefix(doubanTitles, normalizedTitle)) return true;
   } catch {
     // Treat an unavailable catalog as no match and continue to TMDB.
   }
 
   try {
     const tmdbTitles = await searchCanonicalTitlesFromTmdb(title);
-    return containsExactTitle(tmdbTitles, normalizedTitle);
+    return containsCatalogTitlePrefix(tmdbTitles, normalizedTitle);
   } catch {
     return false;
   }

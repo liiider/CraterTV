@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.3',
+    date: '2026-08-22',
+    added: [
+      // 无新增内容
+    ],
+    changed: ['安全搜索改为影视库合规标题前缀匹配，允许续集和各种版本后缀'],
+    fixed: [
+      // 无修复内容
+    ],
+  },
+  {
     version: '1.4.2',
     date: '2026-08-22',
     added: [

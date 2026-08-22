@@ -64,7 +64,7 @@ describe('safeSearchFromApiSites', () => {
     ]);
   });
 
-  it('falls back to TMDB when Douban does not exactly match the returned title', async () => {
+  it('falls back to TMDB when the Douban title is not a prefix', async () => {
     jest.mocked(searchCanonicalTitlesFromDouban).mockResolvedValue(['三体2']);
     jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue(['三体']);
     jest
@@ -78,8 +78,10 @@ describe('safeSearchFromApiSites', () => {
     expect(results).toHaveLength(2);
   });
 
-  it('hides returned titles that neither catalog exactly matches', async () => {
-    jest.mocked(searchCanonicalTitlesFromDouban).mockResolvedValue(['三体']);
+  it('hides returned titles that neither catalog matches by prefix', async () => {
+    jest
+      .mocked(searchCanonicalTitlesFromDouban)
+      .mockResolvedValue(['球状闪电']);
     jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue([]);
     jest
       .mocked(searchFromApi)
@@ -137,6 +139,25 @@ describe('safeSearchFromApiSites', () => {
     expect(results.map((item) => item.id)).toEqual([
       'standard',
       'supplementary',
+    ]);
+    expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
+  });
+
+  it('allows a sequel when the catalog title is its prefix', async () => {
+    jest.mocked(searchCanonicalTitlesFromDouban).mockResolvedValue(['三体']);
+    jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue([]);
+    jest
+      .mocked(searchFromApi)
+      .mockResolvedValue([
+        result('one', 'sequel', '三体2', '2026'),
+        result('one', 'member-edition', '三体（会员版）', '2026'),
+      ]);
+
+    const results = await safeSearchFromApiSites([sites[0]], '三体', true);
+
+    expect(results.map((item) => item.id)).toEqual([
+      'sequel',
+      'member-edition',
     ]);
     expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
   });
