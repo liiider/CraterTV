@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 
-const CURRENT_VERSION = '1.4.1';
+const CURRENT_VERSION = '1.4.2';
 const UPSTREAM_BASE_VERSION = '100.1.3';
 
 // 导出当前版本号供其他地方使用

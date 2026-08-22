@@ -112,6 +112,35 @@ describe('safeSearchFromApiSites', () => {
     expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
   });
 
+  it('allows a trailing supplementary-edition marker to match the catalog title', async () => {
+    jest
+      .mocked(searchCanonicalTitlesFromDouban)
+      .mockResolvedValue(['脱口秀和Ta的朋友们 第三季']);
+    jest
+      .mocked(searchFromApi)
+      .mockResolvedValue([
+        result('one', 'standard', '脱口秀和Ta的朋友们 第三季', '2026'),
+        result(
+          'one',
+          'supplementary',
+          '脱口秀和Ta的朋友们第三季（加更版）',
+          '2026'
+        ),
+      ]);
+
+    const results = await safeSearchFromApiSites(
+      [sites[0]],
+      '脱口秀和Ta的朋友们第三季',
+      true
+    );
+
+    expect(results.map((item) => item.id)).toEqual([
+      'standard',
+      'supplementary',
+    ]);
+    expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
+  });
+
   it('validates the same normalized title and year only once', async () => {
     jest.mocked(searchCanonicalTitlesFromDouban).mockResolvedValue(['三体']);
     jest

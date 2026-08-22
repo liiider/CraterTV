@@ -1,4 +1,7 @@
-const DOUBAN_SUGGEST_URL = 'https://movie.douban.com/j/subject_suggest';
+const DOUBAN_SUGGEST_URLS = [
+  'https://movie.douban.cmliussss.net/j/subject_suggest',
+  'https://movie.douban.com/j/subject_suggest',
+] as const;
 const DOUBAN_SEARCH_TIMEOUT_MS = 8000;
 
 interface DoubanSuggestItem {
@@ -59,19 +62,26 @@ export async function searchCanonicalTitlesFromDouban(
   const params = new URLSearchParams({ q: query });
 
   try {
-    const response = await fetchImpl(`${DOUBAN_SUGGEST_URL}?${params}`, {
-      headers: {
-        Accept: 'application/json, text/plain, */*',
-        Referer: 'https://movie.douban.com/',
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      signal: controller.signal,
-    });
+    for (const suggestUrl of DOUBAN_SUGGEST_URLS) {
+      try {
+        const response = await fetchImpl(`${suggestUrl}?${params}`, {
+          headers: {
+            Accept: 'application/json, text/plain, */*',
+            Referer: 'https://movie.douban.com/',
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          signal: controller.signal,
+        });
 
-    if (!response.ok) return [];
-    return extractCanonicalTitles(await response.json());
-  } catch {
+        if (!response.ok) continue;
+        const titles = extractCanonicalTitles(await response.json());
+        if (titles.length > 0) return titles;
+      } catch {
+        // Try the next fixed endpoint when the current one is unavailable.
+      }
+    }
+
     return [];
   } finally {
     clearTimeout(timeoutId);

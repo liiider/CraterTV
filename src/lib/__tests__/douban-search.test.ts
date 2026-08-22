@@ -32,6 +32,30 @@ describe('searchCanonicalTitlesFromDouban', () => {
     ).resolves.toEqual([]);
   });
 
+  it('uses the deployable Douban CDN and falls back to the direct endpoint', async () => {
+    const fetchMock = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('cdn unavailable'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ type: 'tv', title: '脱口秀和Ta的朋友们 第三季' }],
+      });
+
+    await expect(
+      searchCanonicalTitlesFromDouban('脱口秀和Ta的朋友们第三季', {
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toEqual(['脱口秀和Ta的朋友们 第三季']);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      'https://movie.douban.cmliussss.net/j/subject_suggest'
+    );
+    expect(fetchMock.mock.calls[1][0]).toContain(
+      'https://movie.douban.com/j/subject_suggest'
+    );
+  });
+
   it('keeps all movie and TV titles for exact result validation', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,

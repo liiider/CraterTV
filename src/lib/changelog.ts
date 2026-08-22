@@ -11,6 +11,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.2',
+    date: '2026-08-22',
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+      // 无变更内容
+    ],
+    fixed: [
+      '安全搜索的豆瓣验证优先使用可部署的 CDN，并在失败时回退豆瓣直连',
+      '安全搜索允许“加更版”结果与对应的豆瓣规范标题匹配',
+    ],
+  },
+  {
     version: '1.4.1',
     date: '2026-08-21',
     added: [
