@@ -49,6 +49,14 @@ function containsExactTitle(titles: string[], normalizedTitle: string) {
 }
 
 async function verifySafeSearchResult(result: SearchResult) {
+  if (
+    typeof result.douban_id === 'number' &&
+    Number.isInteger(result.douban_id) &&
+    result.douban_id > 0
+  ) {
+    return true;
+  }
+
   const title = result.title?.trim();
   const normalizedTitle = normalizeSearchTitle(title || '');
   if (!title || !normalizedTitle) return false;

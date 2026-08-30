@@ -23,7 +23,13 @@ const sites = [
   { key: 'two', name: 'Two', api: 'https://two.invalid' },
 ];
 
-const result = (source: string, id: string, title: string, year = '2023') => ({
+const result = (
+  source: string,
+  id: string,
+  title: string,
+  year = '2023',
+  doubanId?: number
+) => ({
   source,
   source_name: source,
   id,
@@ -32,6 +38,7 @@ const result = (source: string, id: string, title: string, year = '2023') => ({
   episodes: [],
   episodes_titles: [],
   year,
+  douban_id: doubanId,
 });
 
 describe('safeSearchFromApiSites', () => {
@@ -62,6 +69,44 @@ describe('safeSearchFromApiSites', () => {
       'one-allowed',
       'two-allowed',
     ]);
+  });
+
+  it('keeps a result with a valid Douban ID before title validation', async () => {
+    jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue([]);
+    jest
+      .mocked(searchFromApi)
+      .mockResolvedValue([
+        result('one', '8047', '进击的巨人第一季', '2013', 23748525),
+      ]);
+
+    const results = await safeSearchFromApiSites(
+      [sites[0]],
+      '进击的巨人第一季',
+      true
+    );
+
+    expect(results.map((item) => item.id)).toEqual(['8047']);
+    expect(searchCanonicalTitlesFromDouban).not.toHaveBeenCalled();
+    expect(searchCanonicalTitlesFromTmdb).not.toHaveBeenCalled();
+  });
+
+  it('falls back to exact title validation for an invalid Douban ID', async () => {
+    jest.mocked(searchCanonicalTitlesFromTmdb).mockResolvedValue([]);
+    jest
+      .mocked(searchFromApi)
+      .mockResolvedValue([
+        result('one', 'invalid-id', '进击的巨人第一季', '2013', 0),
+      ]);
+
+    await expect(
+      safeSearchFromApiSites([sites[0]], '进击的巨人第一季', true)
+    ).resolves.toEqual([]);
+    expect(searchCanonicalTitlesFromDouban).toHaveBeenCalledWith(
+      '进击的巨人第一季'
+    );
+    expect(searchCanonicalTitlesFromTmdb).toHaveBeenCalledWith(
+      '进击的巨人第一季'
+    );
   });
 
   it('falls back to TMDB when Douban does not exactly match the returned title', async () => {
