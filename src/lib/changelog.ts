@@ -11,6 +11,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.6',
+    date: '2026-08-30',
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+      '搜索时优先请求电影天堂，播放候选中有电影天堂资源时优先使用该来源',
+    ],
+    fixed: [
+      '采集源搜索不再缓存成功、空结果、403 或超时响应，避免短暂异常在后续搜索中持续返回旧结果；单次请求仍保留 8 秒超时',
+    ],
+  },
+  {
     version: '1.4.5',
     date: '2026-08-30',
     added: [

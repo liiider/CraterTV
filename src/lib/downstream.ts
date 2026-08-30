@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
-import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
 
@@ -18,27 +17,13 @@ interface ApiSearchItem {
   type_name?: string;
 }
 
-/**
- * 通用的带缓存搜索函数
- */
-async function searchWithCache(
+async function searchPage(
   apiSite: ApiSite,
   query: string,
   page: number,
   url: string,
   timeoutMs = 8000
 ): Promise<{ results: SearchResult[]; pageCount?: number }> {
-  // 先查缓存
-  const cached = getCachedSearchPage(apiSite.key, query, page);
-  if (cached) {
-    if (cached.status === 'ok') {
-      return { results: cached.data, pageCount: cached.pageCount };
-    } else {
-      return { results: [] };
-    }
-  }
-
-  // 缓存未命中，发起网络请求
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -51,9 +36,6 @@ async function searchWithCache(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      if (response.status === 403) {
-        setCachedSearchPage(apiSite.key, query, page, 'forbidden', []);
-      }
       return { results: [] };
     }
 
@@ -64,7 +46,6 @@ async function searchWithCache(
       !Array.isArray(data.list) ||
       data.list.length === 0
     ) {
-      // 空结果不做负缓存要求，这里不写入缓存
       return { results: [] };
     }
 
@@ -118,19 +99,14 @@ async function searchWithCache(
     });
 
     // 过滤掉集数为 0 的结果
-    const results = allResults.filter((result: SearchResult) => result.episodes.length > 0);
+    const results = allResults.filter(
+      (result: SearchResult) => result.episodes.length > 0
+    );
 
     const pageCount = page === 1 ? data.pagecount || 1 : undefined;
-    // 写入缓存（成功）
-    setCachedSearchPage(apiSite.key, query, page, 'ok', results, pageCount);
     return { results, pageCount };
-  } catch (error: any) {
+  } catch {
     clearTimeout(timeoutId);
-    // 识别被 AbortController 中止（超时）
-    const aborted = error?.name === 'AbortError' || error?.code === 20 || error?.message?.includes('aborted');
-    if (aborted) {
-      setCachedSearchPage(apiSite.key, query, page, 'timeout', []);
-    }
     return { results: [] };
   }
 }
@@ -144,8 +120,7 @@ export async function searchFromApi(
     const apiUrl =
       apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
 
-    // 使用新的缓存搜索函数处理第一页
-    const firstPageResult = await searchWithCache(apiSite, query, 1, apiUrl, 8000);
+    const firstPageResult = await searchPage(apiSite, query, 1, apiUrl, 8000);
     const results = firstPageResult.results;
     const pageCountFromFirst = firstPageResult.pageCount;
 
@@ -169,8 +144,13 @@ export async function searchFromApi(
             .replace('{page}', page.toString());
 
         const pagePromise = (async () => {
-          // 使用新的缓存搜索函数处理分页
-          const pageResult = await searchWithCache(apiSite, query, page, pageUrl, 8000);
+          const pageResult = await searchPage(
+            apiSite,
+            query,
+            page,
+            pageUrl,
+            8000
+          );
           return pageResult.results;
         })();
 

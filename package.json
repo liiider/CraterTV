@@ -1,6 +1,6 @@
 {
   "name": "cratertv",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "private": true,
   "scripts": {
     "dev": "pnpm gen:manifest && next dev -H 0.0.0.0",
