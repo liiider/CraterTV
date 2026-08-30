@@ -9,6 +9,7 @@ jest.mock('@/lib/db', () => ({
 import type { AdminConfig } from '@/lib/admin.types';
 import {
   getConfig,
+  getConfigForUser,
   isSafeSearchEnabledForUser,
   resetConfig,
 } from '@/lib/config';
@@ -88,6 +89,24 @@ describe('getConfig cache refresh', () => {
       SiteConfig: { SiteName: 'new' },
     });
 
+    expect(mockedDb.getAdminConfig).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes a stale cached config when a newly added user is missing', async () => {
+    const staleConfig = createConfig('stale');
+    const refreshedConfig = createConfig('refreshed');
+    refreshedConfig.UserConfig.Users.push({
+      username: 'new-viewer',
+      role: 'user',
+      banned: false,
+    });
+    mockedDb.getAdminConfig
+      .mockResolvedValueOnce(staleConfig)
+      .mockResolvedValueOnce(refreshedConfig);
+
+    await getConfig({ forceRefresh: true });
+
+    await expect(getConfigForUser('new-viewer')).resolves.toBe(refreshedConfig);
     expect(mockedDb.getAdminConfig).toHaveBeenCalledTimes(2);
   });
 

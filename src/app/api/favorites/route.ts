@@ -3,13 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getConfig } from '@/lib/config';
+import { getConfigForUser } from '@/lib/config';
 import { db } from '@/lib/db';
 import { Favorite } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
 
 /**
  * GET /api/favorites
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const config = await getConfig();
+    const config = await getConfigForUser(authInfo.username);
     if (authInfo.username !== process.env.USERNAME) {
       // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
@@ -80,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const config = await getConfig();
+    const config = await getConfigForUser(authInfo.username);
     if (authInfo.username !== process.env.USERNAME) {
       // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
@@ -151,7 +150,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const config = await getConfig();
+    const config = await getConfigForUser(authInfo.username);
     if (authInfo.username !== process.env.USERNAME) {
       // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(

@@ -1,7 +1,7 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getConfig } from '@/lib/config';
+import { getConfigForUser } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -162,9 +162,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });
     }
 
-    const config = await getConfig();
+    const config = await getConfigForUser(username);
     const user = config.UserConfig.Users.find((u) => u.username === username);
-    if (user && user.banned) {
+    if (!user) {
+      return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });
+    }
+    if (user.banned) {
       return NextResponse.json({ error: '用户被封禁' }, { status: 401 });
     }
 
@@ -183,7 +186,7 @@ export async function POST(req: NextRequest) {
       const cookieValue = await generateAuthCookie(
         username,
         password,
-        user?.role || 'user',
+        user.role,
         false
       ); // 数据库模式不包含 password
       const expires = new Date();

@@ -326,6 +326,26 @@ export async function getConfig(
   return cachedConfig;
 }
 
+/**
+ * Return a config that is fresh enough to authorize the given user.
+ *
+ * Long-lived instances can keep an admin-config snapshot from before a user
+ * was created. Refresh only on a cache miss so normal user requests keep the
+ * fast path while newly created users are not incorrectly rejected.
+ */
+export async function getConfigForUser(userName: string): Promise<AdminConfig> {
+  const config = await getConfig();
+
+  if (
+    userName === process.env.USERNAME ||
+    config.UserConfig.Users.some((user) => user.username === userName)
+  ) {
+    return config;
+  }
+
+  return getConfig({ forceRefresh: true });
+}
+
 export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
   // 确保必要的属性存在和初始化
   if (!adminConfig.UserConfig) {
@@ -441,7 +461,7 @@ export async function getCacheTime(): Promise<number> {
 }
 
 export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
-  const config = await getConfig();
+  const config = user ? await getConfigForUser(user) : await getConfig();
   const allApiSites = config.SourceConfig.filter((s) => !s.disabled);
   const toApiSites = (sites: typeof allApiSites): ApiSite[] =>
     sites.map((s) => ({
