@@ -32,6 +32,10 @@ import {
   consumePlaybackHandoff,
   mergeRefreshedSources,
 } from '@/lib/playback-handoff';
+import {
+  findPreferredVideoSource,
+  prioritizeVideoSources,
+} from '@/lib/source-priority';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 import { matchesPlaybackTarget } from '@/lib/video-identity';
@@ -223,6 +227,11 @@ function PlayPageClient() {
   const preferBestSource = async (
     sources: SearchResult[]
   ): Promise<SearchResult> => {
+    const dyttSource = findPreferredVideoSource(
+      sources.filter((source) => source.episodes?.length > 0)
+    );
+    if (dyttSource) return dyttSource;
+
     if (sources.length === 1) return sources[0];
 
     // 将播放源均分为两批，并发测速各批，避免一次性过多请求
@@ -778,7 +787,7 @@ function PlayPageClient() {
             doubanId: requestedDoubanId,
           })
         );
-        return results;
+        return prioritizeVideoSources(results);
       } catch (err) {
         if (controller.signal.aborted) return [];
         setSourceSearchError(
@@ -834,10 +843,11 @@ function PlayPageClient() {
     };
 
     const selectInitialDetail = async (sourcesInfo: SearchResult[]) => {
-      let detailData = sourcesInfo[0];
+      const prioritizedSources = prioritizeVideoSources(sourcesInfo);
+      let detailData = prioritizedSources[0];
 
       if (currentSource && currentId && !needPreferRef.current) {
-        const target = sourcesInfo.find(
+        const target = prioritizedSources.find(
           (source) => source.source === currentSource && source.id === currentId
         );
         if (!target) return null;
@@ -850,7 +860,7 @@ function PlayPageClient() {
       ) {
         setLoadingStage('preferring');
         setLoadingMessage('⚡ 正在优选最佳播放源...');
-        detailData = await preferBestSource(sourcesInfo);
+        detailData = await preferBestSource(prioritizedSources);
       }
 
       return detailData;
@@ -877,7 +887,7 @@ function PlayPageClient() {
       setVideoTitle(detailData.title || videoTitleRef.current);
       setVideoCover(detailData.poster);
       setVideoDoubanId(detailData.douban_id || 0);
-      setAvailableSources(sourcesInfo);
+      setAvailableSources(prioritizeVideoSources(sourcesInfo));
       setCurrentEpisodeIndex(restoredState.episodeIndex);
       resumeTimeRef.current = restoredState.resumeTime;
       setDetail(detailData);
@@ -927,10 +937,11 @@ function PlayPageClient() {
 
       const handoff = playbackHandoffRef.current;
       if (handoff) {
+        const handoffSources = prioritizeVideoSources(handoff.sources);
         const backgroundRefresh = handoff.searchComplete
           ? null
           : fetchSourcesData(searchTitle || videoTitle, true);
-        const detailData = await selectInitialDetail(handoff.sources);
+        const detailData = await selectInitialDetail(handoffSources);
 
         if (!detailData) {
           setError('未找到匹配结果');
@@ -938,7 +949,7 @@ function PlayPageClient() {
           return;
         }
 
-        await commitInitialDetail(detailData, handoff.sources);
+        await commitInitialDetail(detailData, handoffSources);
 
         if (backgroundRefresh) {
           void backgroundRefresh.then((refreshedSources) => {

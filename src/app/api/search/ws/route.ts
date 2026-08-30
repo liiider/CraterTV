@@ -10,6 +10,7 @@ import {
   SEARCH_BATCH_SIZE,
   searchFromApiSiteWithTimeout,
 } from '@/lib/safe-search';
+import { partitionVideoSourcesByPreference } from '@/lib/source-priority';
 import { runInBatches } from '@/lib/source-validation';
 
 export const runtime = 'nodejs';
@@ -154,7 +155,13 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      await runInBatches(apiSites, SEARCH_BATCH_SIZE, searchSite);
+      const { preferred, others } = partitionVideoSourcesByPreference(apiSites);
+      if (preferred.length > 0) {
+        await runInBatches(preferred, SEARCH_BATCH_SIZE, searchSite);
+      }
+      if (!streamClosed && others.length > 0) {
+        await runInBatches(others, SEARCH_BATCH_SIZE, searchSite);
+      }
     },
 
     cancel() {

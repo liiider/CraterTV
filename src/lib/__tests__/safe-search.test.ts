@@ -254,6 +254,47 @@ describe('safeSearchFromApiSites', () => {
     expect(results).toHaveLength(2);
   });
 
+  it('completes the Movie Heaven search before starting other sources', async () => {
+    const dyttSite = {
+      key: 'dyttzy',
+      name: '电影天堂',
+      api: 'https://dytt.invalid',
+    };
+    const otherSites = [sites[0], sites[1]];
+    let releaseDytt: (() => void) | undefined;
+    const releaseOthers: Array<() => void> = [];
+
+    jest.mocked(searchFromApi).mockImplementation(
+      (site) =>
+        new Promise((resolve) => {
+          const release = () =>
+            resolve([result(site.key, site.key, `来自 ${site.name}`)]);
+          if (site.key === dyttSite.key) {
+            releaseDytt = release;
+          } else {
+            releaseOthers.push(release);
+          }
+        })
+    );
+
+    const searchPromise = safeSearchFromApiSites(
+      [...otherSites, dyttSite],
+      '火遮眼',
+      false
+    );
+    await Promise.resolve();
+
+    expect(searchFromApi).toHaveBeenCalledTimes(1);
+    expect(searchFromApi).toHaveBeenCalledWith(dyttSite, '火遮眼');
+
+    releaseDytt?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(searchFromApi).toHaveBeenCalledTimes(3);
+    releaseOthers.forEach((release) => release());
+    await expect(searchPromise).resolves.toHaveLength(3);
+  });
+
   it('keeps successful source results when another normal source fails', async () => {
     jest.mocked(searchFromApi).mockImplementation(async (site) => {
       if (site.key === 'one') {

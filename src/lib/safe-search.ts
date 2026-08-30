@@ -1,6 +1,7 @@
 import { ApiSite } from '@/lib/config';
 import { searchCanonicalTitlesFromDouban } from '@/lib/douban-search';
 import { searchFromApi } from '@/lib/downstream';
+import { partitionVideoSourcesByPreference } from '@/lib/source-priority';
 import { runInBatches } from '@/lib/source-validation';
 import { searchCanonicalTitlesFromTmdb } from '@/lib/tmdb-search';
 import { SearchResult } from '@/lib/types';
@@ -133,9 +134,24 @@ export async function safeSearchFromApiSites(
 ) {
   if (apiSites.length === 0) return [];
 
-  const results = await runInBatches(apiSites, SEARCH_BATCH_SIZE, (site) =>
-    searchFromApiSiteWithTimeout(site, query)
-  );
+  const { preferred, others } = partitionVideoSourcesByPreference(apiSites);
+  const results: PromiseSettledResult<SearchResult[]>[] = [];
+
+  if (preferred.length > 0) {
+    results.push(
+      ...(await runInBatches(preferred, SEARCH_BATCH_SIZE, (site) =>
+        searchFromApiSiteWithTimeout(site, query)
+      ))
+    );
+  }
+
+  if (others.length > 0) {
+    results.push(
+      ...(await runInBatches(others, SEARCH_BATCH_SIZE, (site) =>
+        searchFromApiSiteWithTimeout(site, query)
+      ))
+    );
+  }
   const dedupedResults = dedupeResults(
     results
       .filter(
