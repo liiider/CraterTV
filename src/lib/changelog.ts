@@ -11,6 +11,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.5',
+    date: '2026-08-30',
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+      // 无变更内容
+    ],
+    fixed: [
+      '新增用户立即登录时，配置缓存缺失会回源刷新，避免跨实例误判为用户不存在并自动退出',
+      '首页播放优先使用有效且一致的豆瓣 ID 确认同一影片；ID 缺失或不一致时保留原有标题、年份和类型匹配',
+    ],
+  },
+  {
     version: '1.4.4',
     date: '2026-08-22',
     added: [

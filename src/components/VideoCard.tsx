@@ -140,6 +140,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
         ? 'movie'
         : 'tv'
       : type;
+    const doubanIdQuery =
+      typeof actualDoubanId === 'number' &&
+      Number.isInteger(actualDoubanId) &&
+      actualDoubanId > 0
+        ? `&douban_id=${actualDoubanId}`
+        : '';
 
     const createHandoffQuery = useCallback(() => {
       if (
@@ -292,7 +298,9 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           isAggregate ? '&prefer=true' : ''
         }${
           actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${from === 'douban' ? '&catalog=douban' : ''}${handoffQuery}`;
+        }${
+          from === 'douban' ? '&catalog=douban' : ''
+        }${doubanIdQuery}${handoffQuery}`;
         router.push(url);
       } else if (actualSource && actualId) {
         const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
@@ -317,6 +325,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       isAggregate,
       actualQuery,
       actualSearchType,
+      doubanIdQuery,
       createHandoffQuery,
     ]);
 
@@ -339,7 +348,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           isAggregate ? '&prefer=true' : ''
         }${
           actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${from === 'douban' ? '&catalog=douban' : ''}`;
+        }${from === 'douban' ? '&catalog=douban' : ''}${doubanIdQuery}`;
         window.open(url, '_blank');
       } else if (actualSource && actualId) {
         const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
@@ -361,6 +370,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       isAggregate,
       actualQuery,
       actualSearchType,
+      doubanIdQuery,
     ]);
 
     // 检查搜索结果的收藏状态

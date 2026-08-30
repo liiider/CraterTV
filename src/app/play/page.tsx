@@ -34,6 +34,7 @@ import {
 } from '@/lib/playback-handoff';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
+import { matchesPlaybackTarget } from '@/lib/video-identity';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
 import PageLayout from '@/components/PageLayout';
@@ -98,7 +99,12 @@ function PlayPageClient() {
   const [videoTitle, setVideoTitle] = useState(searchParams.get('title') || '');
   const [videoYear, setVideoYear] = useState(searchParams.get('year') || '');
   const [videoCover, setVideoCover] = useState('');
-  const [videoDoubanId, setVideoDoubanId] = useState(0);
+  const requestedDoubanIdValue = Number(searchParams.get('douban_id'));
+  const requestedDoubanId =
+    Number.isInteger(requestedDoubanIdValue) && requestedDoubanIdValue > 0
+      ? requestedDoubanIdValue
+      : undefined;
+  const [videoDoubanId, setVideoDoubanId] = useState(requestedDoubanId || 0);
   // 当前源和ID
   const [currentSource, setCurrentSource] = useState(
     searchParams.get('source') || ''
@@ -764,18 +770,13 @@ function PlayPageClient() {
         const data = await response.json();
 
         // 处理搜索结果，根据规则过滤
-        const results = data.results.filter(
-          (result: SearchResult) =>
-            result.title.replaceAll(' ', '').toLowerCase() ===
-              videoTitleRef.current.replaceAll(' ', '').toLowerCase() &&
-            (videoYearRef.current
-              ? (result.year || 'unknown').toLowerCase() ===
-                videoYearRef.current.toLowerCase()
-              : true) &&
-            (searchType
-              ? (searchType === 'tv' && result.episodes.length > 1) ||
-                (searchType === 'movie' && result.episodes.length === 1)
-              : true)
+        const results = data.results.filter((result: SearchResult) =>
+          matchesPlaybackTarget(result, {
+            title: videoTitleRef.current,
+            year: videoYearRef.current,
+            type: searchType,
+            doubanId: requestedDoubanId,
+          })
         );
         return results;
       } catch (err) {
